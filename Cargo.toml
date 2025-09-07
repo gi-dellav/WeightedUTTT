@@ -1,0 +1,9 @@
+[package]
+name = "WeightedUTTT"
+version = "0.1.0"
+edition = "2024"
+
+[dependencies]
+cmaes = { version = "0.2.2", default-features = false }
+egobox-ego = "0.32.0"
+genevo = "0.7.1"
