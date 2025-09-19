@@ -1,9 +1,8 @@
-
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub enum Cell {
     Empty,
     Cross,
-    Circle
+    Circle,
 }
 #[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Minigrid {
@@ -29,19 +28,23 @@ pub struct MatchStats {
 }
 
 impl Default for Cell {
-    fn default() -> Cell { Cell::Empty }
+    fn default() -> Cell {
+        Cell::Empty
+    }
 }
 impl Default for Minigrid {
     fn default() -> Minigrid {
-        return Minigrid{ matrix: [Cell::Empty; 9] };
-     }
+        return Minigrid {
+            matrix: [Cell::Empty; 9],
+        };
+    }
 }
 impl Default for Grid {
     fn default() -> Grid {
         return Grid {
             matrix: [Default::default(); 9],
             completed_minigrid: [Cell::Empty; 9],
-        }
+        };
     }
 }
 impl Minigrid {
@@ -57,9 +60,9 @@ impl Minigrid {
 }
 impl Grid {
     fn set(&mut self, coord: Coord, symbol: Cell) {
-        let minigrid_pos = (coord.meta_x + 3*coord.meta_y) as usize;
+        let minigrid_pos = (coord.meta_x + 3 * coord.meta_y) as usize;
         let mut minigrid = self.matrix[minigrid_pos];
-        let grid_pos = (coord.x + 3*coord.y) as usize;
+        let grid_pos = (coord.x + 3 * coord.y) as usize;
         minigrid.matrix[grid_pos] = symbol;
     }
     fn update_grid(&mut self) {
@@ -94,7 +97,9 @@ impl Grid {
     fn check_completed(self, v1: usize, v2: usize, v3: usize) -> Option<Cell> {
         // All values must be non-empty and equal
         if self.completed_minigrid[v1] != Cell::Empty {
-            if self.completed_minigrid[v1] == self.completed_minigrid[v2] && self.completed_minigrid[v2] == self.completed_minigrid[v3] {
+            if self.completed_minigrid[v1] == self.completed_minigrid[v2]
+                && self.completed_minigrid[v2] == self.completed_minigrid[v3]
+            {
                 return Some(self.completed_minigrid[v1]);
             }
         }
@@ -177,5 +182,5 @@ pub fn play_match<A: Player + Copy, B: Player + Copy>(a: A, b: B) -> MatchStats 
         winner: last_player,
         number_turns,
         final_grid: grid,
-    }
+    };
 }
