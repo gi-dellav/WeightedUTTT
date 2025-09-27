@@ -3,10 +3,17 @@ pub mod human;
 pub mod mcts;
 pub mod weighted;
 
-// pub mod bayesian_solver;  // TODO: Implementare
-// pub mod ga_solver;        // TODO: Implementare
-pub mod cmaes_solver;
+use crate::defs::{play_match, Cell};
+use crate::human::HumanPlayer;
+use crate::mcts::MCTSPlayer;
 
 fn main() {
-    println!("Hello, world!");
+    let human = HumanPlayer::new(Cell::Cross);
+    let ai = MCTSPlayer::new(1.5, 800); // Parametri da principiante
+    
+    let stats = play_match(human, ai);
+    
+    println!("Risultato finale:");
+    println!("Vincitore: {:?}", stats.winner);
+    println!("Numero di turni: {}", stats.number_turns);
 }
