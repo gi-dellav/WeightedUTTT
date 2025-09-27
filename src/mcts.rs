@@ -91,10 +91,10 @@ impl MCTSPlayer {
     }
 
     fn simulate(&self, state: &Grid) -> f32 {
-        (0..100).into_par_iter().map(|_| {
+        (0..self.simulation_steps).into_par_iter().map(|_| {
             let mut rng = rand::thread_rng();
             let mut sim_state = *state;
-            let mut current_player = Cell::Cross;
+            let mut current_player = self.symbol;
             let mut stats = MatchStats {
                 winner: Cell::Empty,
                 number_turns: 0,
@@ -102,10 +102,14 @@ impl MCTSPlayer {
             };
 
             while stats.winner == Cell::Empty && stats.number_turns < 9 {
-                let legal_moves = self.get_legal_moves(&sim_state);
+                let legal_moves = sim_state.get_legal_moves(None); // During simulation we don't track last move
+                if legal_moves.is_empty() {
+                    break;
+                }
                 let random_move = legal_moves[rng.gen_range(0..legal_moves.len())];
                 
                 sim_state.set(random_move, current_player);
+                sim_state.update_grid();
                 sim_state.update_grid();
                 
                 stats.final_grid = sim_state;
@@ -119,9 +123,9 @@ impl MCTSPlayer {
             }
 
             match stats.winner {
-                Cell::Cross => 1.0,
-                Cell::Circle => -1.0,
-                Cell::Empty => 0.0,
+                winner if winner == self.symbol => 1.0,
+                winner if winner != Cell::Empty => -1.0,
+                _ => 0.0,
             }
         }).sum::<f32>() / 100.0
     }
@@ -188,7 +192,7 @@ impl Player for MCTSPlayer {
 
         root.children.lock().unwrap().par_iter()
             .max_by(|a, b| a.visits.load(Ordering::Relaxed).cmp(&b.visits.load(Ordering::Relaxed)))
-            .map(|n| self.get_legal_moves(&root.state)
+            .map(|n| root.state.get_legal_moves(None)
                 .into_par_iter()
                 .find_first(|m| {
                     let mut g = root.state;
