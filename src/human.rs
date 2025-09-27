@@ -88,22 +88,59 @@ impl Player for HumanPlayer {
     }
 
     fn select_move(&self, grid: Grid, _last_move: Option<Coord>) -> Coord {
-        // TODO: Implementare la logica per leggere le coordinate dall'utente
         clear_term();
-
         println!("-----------------------------");
         println!("- {:?}'s TURN -", self.symbol);
         print_grid(&grid);
 
-        // TODO: Implementare la logica per leggere l'input dell'utente
-        // TODO: Validare la mossa rispetto alle regole del gioco
-        // TODO: Gestire errori di input
+        // Get all legal moves first for validation
+        let legal_moves = grid.get_legal_moves(_last_move);
 
-        println!("Select grid X: ");
-        println!("Select grid Y: ");
-        println!("Select minigrid X: ");
-        println!("Select minigrid Y: ");
+        loop {
+            println!("Enter coordinates (meta_x meta_y x y) between 0-2 separated by spaces:");
+            print!("> ");
+            io::stdout().flush().unwrap();
 
-        todo!("Implement HumanPlayer")
+            let input = input_str();
+            let parts: Vec<&str> = input.split_whitespace().collect();
+
+            // Parse input coordinates
+            let coords = match parts.as_slice() {
+                [mx, my, x, y] => {
+                    match (mx.parse(), my.parse(), x.parse(), y.parse()) {
+                        (Ok(mx), Ok(my), Ok(x), Ok(y)) => Some(Coord {
+                            meta_x: mx,
+                            meta_y: my,
+                            x: x,
+                            y: y,
+                        }),
+                        _ => {
+                            println!("Invalid input: Please enter numbers between 0-2");
+                            continue;
+                        }
+                    }
+                }
+                _ => {
+                    println!("Invalid format: Expected 4 numbers separated by spaces");
+                    continue;
+                }
+            };
+
+            // Validate coordinates
+            if let Some(coord) = coords {
+                // Check all coordinates are within 0-2 range
+                if [coord.meta_x, coord.meta_y, coord.x, coord.y].iter().any(|&v| v > 2) {
+                    println!("Coordinates must be between 0-2");
+                    continue;
+                }
+
+                // Check if move is legal
+                if legal_moves.contains(&coord) {
+                    return coord;
+                } else {
+                    println!("Invalid move: That position is not playable according to game rules");
+                }
+            }
+        }
     }
 }
