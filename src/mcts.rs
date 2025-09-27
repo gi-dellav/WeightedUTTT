@@ -1,5 +1,5 @@
 
-use crate::defs::{Cell, Coord, Grid, Player, MatchStats};
+use crate::defs::{Cell, Coord, Grid, Player, MatchStats, Minigrid};
 use rand::Rng;
 use rayon::prelude::*;
 use std::sync::Arc;
@@ -39,9 +39,21 @@ impl MCTSPlayer {
         }
     }
 
-    fn get_legal_moves(&self, _grid: &Grid) -> Vec<Coord> {
-        // TODO: Implementare la logica reale per le mosse legali
-        vec![Coord { meta_x: 0, meta_y: 0, x: 0, y: 0 }]
+    fn get_legal_moves(&self, grid: &Grid) -> Vec<Coord> {
+        let mut moves = Vec::new();
+        // Temporary implementation to get compilation working
+        for meta_x in 0..3 {
+            for meta_y in 0..3 {
+                for x in 0..3 {
+                    for y in 0..3 {
+                        if grid.matrix[(meta_x + meta_y * 3) as usize].matrix[(x + y * 3) as usize] == Cell::Empty {
+                            moves.push(Coord { meta_x, meta_y, x, y });
+                        }
+                    }
+                }
+            }
+        }
+        moves
     }
 
     fn ucb(&self, node: &Node) -> f32 {

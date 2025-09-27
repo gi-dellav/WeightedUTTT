@@ -1,4 +1,4 @@
-use crate::defs::*;
+use crate::defs::{Cell, Coord, Grid, Player};
 use crossterm::{
     execute,
     terminal::{Clear, ClearType},

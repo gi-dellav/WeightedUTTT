@@ -133,7 +133,7 @@ impl Grid {
     }
 }
 
-pub trait Player {
+pub trait Player: Send + Sync {
     /// Run before playing a match
     fn reset(&self);
     fn select_move(&self, grid: Grid, last_move: Option<Coord>) -> Coord;
