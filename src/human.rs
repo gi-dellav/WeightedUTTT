@@ -71,6 +71,7 @@ pub fn input_str() -> String {
     return input.trim().to_string();
 }
 
+#[derive(Clone, Copy)]
 pub struct HumanPlayer {
     symbol: Cell,
 }

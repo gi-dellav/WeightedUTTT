@@ -8,7 +8,7 @@ pub enum Cell {
 pub struct Minigrid {
     pub matrix: [Cell; 9],
 }
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq)]
 pub struct Grid {
     pub matrix: [Minigrid; 9],
     pub completed_minigrid: [Cell; 9],
@@ -59,13 +59,13 @@ impl Minigrid {
     }
 }
 impl Grid {
-    fn set(&mut self, coord: Coord, symbol: Cell) {
+    pub fn set(&mut self, coord: Coord, symbol: Cell) {
         let minigrid_pos = (coord.meta_x + 3 * coord.meta_y) as usize;
         let mut minigrid = self.matrix[minigrid_pos];
         let grid_pos = (coord.x + 3 * coord.y) as usize;
         minigrid.matrix[grid_pos] = symbol;
     }
-    fn update_grid(&mut self) {
+    pub fn update_grid(&mut self) {
         let mut index: usize = 0;
         for minigrid in self.matrix {
             let mut results = Vec::new();
@@ -105,7 +105,7 @@ impl Grid {
         }
         None
     }
-    fn is_completed(self) -> Option<Cell> {
+    pub fn is_completed(self) -> Option<Cell> {
         // If the grid is completed, returns the symbol of the winner
         let mut results = Vec::new();
 

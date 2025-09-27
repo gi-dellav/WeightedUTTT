@@ -1,20 +1,34 @@
 
-use crate::defs::{Cell, Coord, Grid, Player};
+use crate::defs::{Cell, Coord, Grid, Player, MatchStats};
+use rand::Rng;
 use rayon::prelude::*;
 use std::sync::Arc;
 
+#[derive(Clone, Copy)]
 pub struct MCTSPlayer {
     exploration_weight: f32,
     simulation_steps: u32,
 }
 
 #[derive(Clone)]
+use std::sync::atomic::{AtomicU32, Ordering};
+
 struct Node {
     state: Grid,
-    visits: u32,
-    score: f32,
+    visits: AtomicU32,
+    score: AtomicU32,
     children: Vec<Arc<Node>>,
     parent: Option<Arc<Node>>,
+}
+
+impl Node {
+    fn get_visits(&self) -> u32 {
+        self.visits.load(Ordering::Relaxed)
+    }
+    
+    fn get_score(&self) -> f32 {
+        f32::from_bits(self.score.load(Ordering::Relaxed))
+    }
 }
 
 impl MCTSPlayer {
@@ -23,6 +37,11 @@ impl MCTSPlayer {
             exploration_weight,
             simulation_steps,
         }
+    }
+
+    fn get_legal_moves(&self, grid: &Grid) -> Vec<Coord> {
+        // TODO: Implementare la logica reale per le mosse legali
+        vec![Coord { meta_x: 0, meta_y: 0, x: 0, y: 0 }]
     }
 
     fn ucb(&self, node: &Node) -> f32 {
