@@ -16,7 +16,7 @@ struct Node {
     state: Grid,
     visits: AtomicU32,
     score: AtomicU32,
-    children: Vec<Arc<Node>>,
+    children: std::sync::Mutex<Vec<Arc<Node>>>,
     parent: Option<Arc<Node>>,
 }
 
@@ -26,7 +26,7 @@ impl Clone for Node {
             state: self.state,
             visits: AtomicU32::new(self.visits.load(Ordering::Relaxed)),
             score: AtomicU32::new(self.score.load(Ordering::Relaxed)),
-            children: self.children.clone(),
+            children: std::sync::Mutex::new(self.children.lock().unwrap().clone()),
             parent: self.parent.clone(),
         }
     }
@@ -81,7 +81,7 @@ impl MCTSPlayer {
     }
 
     fn select_best_child(&self, node: &Node) -> Arc<Node> {
-        node.children.par_iter()
+        node.children.lock().unwrap().par_iter()
             .max_by(|a, b| self.ucb(a).partial_cmp(&self.ucb(b)).unwrap())
             .unwrap()
             .clone()
@@ -160,7 +160,7 @@ impl Player for MCTSPlayer {
                     let mut new_state = node.state;
                     new_state.set(*m, Cell::Cross);
                     new_state.update_grid();
-                    node.children.push(Arc::new(Node {
+                    node.children.lock().unwrap().push(Arc::new(Node {
                         state: new_state,
                         visits: AtomicU32::new(0),
                         score: AtomicU32::new(0.0f32.to_bits()),
