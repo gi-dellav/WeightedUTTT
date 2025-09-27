@@ -235,7 +235,4 @@ pub fn play_match<A: Player + Copy, B: Player + Copy>(a: A, b: B) -> MatchStats 
         };
         number_turns += 1;
     }
-
-    // This return statement is unreachable since we always break from the loop with the MatchStats
-    unreachable!()
 }

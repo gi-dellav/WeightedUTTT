@@ -180,14 +180,16 @@ impl Player for MCTSPlayer {
         let legal_moves = root.state.get_legal_moves(None);
         children.par_iter()
             .max_by(|a, b| a.visits.load(Ordering::Relaxed).cmp(&b.visits.load(Ordering::Relaxed)))
-            .map(move |n| legal_moves
-                .into_par_iter()
+            .map(|n| {
+                let root_state = root.state.clone();
+                legal_moves.into_par_iter()
                 .find_first(|m| {
-                    let mut g = root.state;
+                    let mut g = root_state;
                     g.set(*m, Cell::Cross);
                     g.update_grid();
                     g == n.state
                 })
+            })
                 .unwrap())
             .unwrap()
     }
