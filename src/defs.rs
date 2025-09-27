@@ -147,6 +147,7 @@ pub fn play_match<A: Player + Copy, B: Player + Copy>(a: A, b: B) -> MatchStats 
     let last_move: Option<Coord> = None;
     let mut _last_player: Cell = Cell::Empty;
     let mut number_turns: u8 = 0;
+    let mut last_move: Option<Coord> = None;
 
     loop {
         let a_coord = a.select_move(grid, last_move);
@@ -155,11 +156,11 @@ pub fn play_match<A: Player + Copy, B: Player + Copy>(a: A, b: B) -> MatchStats 
 
         let grid_completed: Option<Cell> = grid.is_completed();
         if grid_completed.is_some() {
-            last_player = grid_completed.unwrap();
+            _last_player = grid_completed.unwrap();
             break;
         }
 
-        last_player = Cell::Cross;
+        _last_player = Cell::Cross;
         number_turns += 1;
 
         // ---
@@ -170,16 +171,16 @@ pub fn play_match<A: Player + Copy, B: Player + Copy>(a: A, b: B) -> MatchStats 
 
         let grid_completed: Option<Cell> = grid.is_completed();
         if grid_completed.is_some() {
-            last_player = grid_completed.unwrap();
+            _last_player = grid_completed.unwrap();
             break;
         }
 
-        last_player = Cell::Circle;
+        _last_player = Cell::Circle;
         number_turns += 1;
     }
 
     return MatchStats {
-        winner: last_player,
+        winner: _last_player,
         number_turns,
         final_grid: grid,
     };
