@@ -176,9 +176,11 @@ impl Player for MCTSPlayer {
             Self::backpropagate(&node, result);
         });
 
-        root.children.lock().unwrap().par_iter()
+        let children = root.children.lock().unwrap();
+        let legal_moves = root.state.get_legal_moves(None);
+        children.par_iter()
             .max_by(|a, b| a.visits.load(Ordering::Relaxed).cmp(&b.visits.load(Ordering::Relaxed)))
-            .map(move |n| root.state.get_legal_moves(None)
+            .map(move |n| legal_moves
                 .into_par_iter()
                 .find_first(|m| {
                     let mut g = root.state;

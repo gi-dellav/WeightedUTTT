@@ -221,7 +221,7 @@ pub fn play_match<A: Player + Copy, B: Player + Copy>(a: A, b: B) -> MatchStats 
         last_move = Some(coord);
         
         if let Some(winner) = grid.is_completed() {
-            break MatchStats {
+            return MatchStats {
                 winner: winner,
                 number_turns,
                 final_grid: grid,
