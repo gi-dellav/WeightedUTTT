@@ -168,7 +168,11 @@ impl Player for MCTSPlayer {
                         parent: Some(node.clone()),
                     }));
                 });
-                node = node.children.lock().unwrap()[0].clone();
+                let next_node = { 
+                    let children = node.children.lock().unwrap();
+                    children[0].clone()
+                };
+                node = next_node;
             }
             
             // Simulation
