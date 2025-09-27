@@ -8,3 +8,4 @@ cached = "0.56.0"
 clap = { version = "4.5.47", features = ["derive"] }
 cmaes = { version = "0.2.2", default-features = false }
 crossterm = "0.29.0"
+rand = "0.8.5"
