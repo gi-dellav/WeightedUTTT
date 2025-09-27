@@ -8,6 +8,7 @@ use std::sync::Arc;
 pub struct MCTSPlayer {
     exploration_weight: f32,
     simulation_steps: u32,
+    symbol: Cell,
 }
 
 use std::sync::atomic::{AtomicU32, Ordering};
@@ -18,6 +19,7 @@ struct Node {
     score: AtomicU32,
     children: std::sync::Mutex<Vec<Arc<Node>>>,
     parent: Option<Arc<Node>>,
+    last_move: Option<Coord>,
 }
 
 impl Clone for Node {
@@ -167,6 +169,7 @@ impl Player for MCTSPlayer {
                         score: AtomicU32::new(0.0f32.to_bits()),
                         children: std::sync::Mutex::new(Vec::new()),
                         parent: Some(node.clone()),
+                        last_move: Some(*m),
                     }));
                 });
                 let next_node = { 
