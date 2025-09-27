@@ -205,38 +205,34 @@ pub fn play_match<A: Player + Copy, B: Player + Copy>(a: A, b: B) -> MatchStats 
     b.reset();
 
     let mut grid: Grid = Default::default();
-    let _last_move: Option<Coord> = None;
-    let mut _last_player: Cell = Cell::Empty;
+    let mut last_move: Option<Coord> = None;
+    let mut current_player = Cell::Cross;
     let mut number_turns: u8 = 0;
-    let last_move: Option<Coord> = None;
 
     loop {
-        let a_coord = a.select_move(grid, last_move);
-        grid.set(a_coord, Cell::Cross);
+        let coord = match current_player {
+            Cell::Cross => a.select_move(grid, last_move),
+            Cell::Circle => b.select_move(grid, last_move),
+            _ => panic!("Invalid player state"),
+        };
+        
+        grid.set(coord, current_player);
         grid.update_grid();
-
-        let grid_completed: Option<Cell> = grid.is_completed();
-        if grid_completed.is_some() {
-            _last_player = grid_completed.unwrap();
-            break;
+        last_move = Some(coord);
+        
+        if let Some(winner) = grid.is_completed() {
+            break MatchStats {
+                winner,
+                number_turns,
+                final_grid: grid,
+            };
         }
-
-        _last_player = Cell::Cross;
-        number_turns += 1;
-
-        // ---
-
-        let b_coord = b.select_move(grid, last_move);
-        grid.set(b_coord, Cell::Circle);
-        grid.update_grid();
-
-        let grid_completed: Option<Cell> = grid.is_completed();
-        if grid_completed.is_some() {
-            _last_player = grid_completed.unwrap();
-            break;
-        }
-
-        _last_player = Cell::Circle;
+        
+        current_player = if current_player == Cell::Cross {
+            Cell::Circle
+        } else {
+            Cell::Cross
+        };
         number_turns += 1;
     }
 

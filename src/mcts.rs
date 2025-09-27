@@ -53,22 +53,6 @@ impl MCTSPlayer {
         }
     }
 
-    fn get_legal_moves(&self, grid: &Grid) -> Vec<Coord> {
-        let mut moves = Vec::new();
-        // Temporary implementation to get compilation working
-        for meta_x in 0..3 {
-            for meta_y in 0..3 {
-                for x in 0..3 {
-                    for y in 0..3 {
-                        if grid.matrix[(meta_x + meta_y * 3) as usize].matrix[(x + y * 3) as usize] == Cell::Empty {
-                            moves.push(Coord { meta_x, meta_y, x, y });
-                        }
-                    }
-                }
-            }
-        }
-        moves
-    }
 
     fn ucb(&self, node: &Node) -> f32 {
         let visits = node.visits.load(Ordering::Relaxed);
