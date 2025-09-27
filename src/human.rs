@@ -4,7 +4,7 @@ use crossterm::{
     terminal::{Clear, ClearType},
 };
 use std::io::{self, Write, stdout};
-use std::fmt::Write as FmtWrite;  // Necessario per write! su String
+use std::fmt::Write;  // Necessario per write! su String
 
 pub fn clear_term() {
     execute!(stdout(), Clear(ClearType::All)).unwrap();
@@ -97,6 +97,6 @@ impl Player for HumanPlayer {
         println!("Select minigrid X: ");
         println!("Select minigrid Y: ");
 
-        todo!("Implementare la selezione della mossa per HumanPlayer")
+        panic!("Implementare la selezione della mossa per HumanPlayer")
     }
 }
