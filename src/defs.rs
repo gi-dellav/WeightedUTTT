@@ -222,7 +222,7 @@ pub fn play_match<A: Player + Copy, B: Player + Copy>(a: A, b: B) -> MatchStats 
         
         if let Some(winner) = grid.is_completed() {
             break MatchStats {
-                winner,
+                winner: winner,
                 number_turns,
                 final_grid: grid,
             };
@@ -236,9 +236,6 @@ pub fn play_match<A: Player + Copy, B: Player + Copy>(a: A, b: B) -> MatchStats 
         number_turns += 1;
     }
 
-    return MatchStats {
-        winner,
-        number_turns,
-        final_grid: grid,
-    };
+    // This return statement is unreachable since we always break from the loop with the MatchStats
+    unreachable!()
 }

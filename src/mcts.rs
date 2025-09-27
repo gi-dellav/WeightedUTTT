@@ -178,7 +178,7 @@ impl Player for MCTSPlayer {
 
         root.children.lock().unwrap().par_iter()
             .max_by(|a, b| a.visits.load(Ordering::Relaxed).cmp(&b.visits.load(Ordering::Relaxed)))
-            .map(|n| root.state.get_legal_moves(None)
+            .map(move |n| root.state.get_legal_moves(None)
                 .into_par_iter()
                 .find_first(|m| {
                     let mut g = root.state;
