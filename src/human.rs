@@ -75,6 +75,12 @@ pub struct HumanPlayer {
     symbol: Cell,
 }
 
+impl HumanPlayer {
+    pub fn new(symbol: Cell) -> Self {
+        Self { symbol }
+    }
+}
+
 impl Player for HumanPlayer {
     fn reset(self) {
         // Empty function, no reset logic needed
@@ -82,13 +88,11 @@ impl Player for HumanPlayer {
 
     fn select_move(self, grid: Grid, _last_move: Option<Coord>) -> Coord {
         // TODO: Implementare la logica per leggere le coordinate dall'utente
-        todo!("Implementare la selezione della mossa per HumanPlayer");
         clear_term();
 
         println!("-----------------------------");
         println!("- {:?}'s TURN -", self.symbol);
-
-        print_grid(&grid.clone());
+        print_grid(&grid);
 
         // TODO: Implementare la logica per leggere l'input dell'utente
         // TODO: Validare la mossa rispetto alle regole del gioco
@@ -99,6 +103,6 @@ impl Player for HumanPlayer {
         println!("Select minigrid X: ");
         println!("Select minigrid Y: ");
 
-        panic!("Implementare la selezione della mossa per HumanPlayer")
+        todo!("Implementare la selezione della mossa per HumanPlayer")
     }
 }

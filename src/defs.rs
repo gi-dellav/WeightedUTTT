@@ -135,8 +135,8 @@ impl Grid {
 
 pub trait Player {
     /// Run before playing a match
-    fn reset(self);
-    fn select_move(self, grid: Grid, last_move: Option<Coord>) -> Coord;
+    fn reset(&self);
+    fn select_move(&self, grid: Grid, last_move: Option<Coord>) -> Coord;
 }
 
 pub fn play_match<A: Player + Copy, B: Player + Copy>(a: A, b: B) -> MatchStats {

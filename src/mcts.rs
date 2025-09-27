@@ -3,6 +3,12 @@ use crate::defs::{Coord, Grid, Player};
 
 pub struct MCTSPlayer;
 
+impl MCTSPlayer {
+    pub fn new() -> Self {
+        Self
+    }
+}
+
 impl Player for MCTSPlayer {
     fn reset(self) {
         // Reset dello stato MCTS se necessario
