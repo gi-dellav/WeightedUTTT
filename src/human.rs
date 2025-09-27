@@ -134,11 +134,20 @@ impl Player for HumanPlayer {
                     continue;
                 }
 
-                // Check if move is legal
-                if legal_moves.contains(&coord) {
+                // Check if move is legal by comparing all fields
+                if legal_moves.iter().any(|c| 
+                    c.meta_x == coord.meta_x &&
+                    c.meta_y == coord.meta_y &&
+                    c.x == coord.x &&
+                    c.y == coord.y
+                ) {
                     return coord;
                 } else {
                     println!("Invalid move: That position is not playable according to game rules");
+                    println!("Legal moves are:");
+                    for m in legal_moves {
+                        println!("- Meta: ({},{}) Local: ({},{})", m.meta_x, m.meta_y, m.x, m.y);
+                    }
                 }
             }
         }
