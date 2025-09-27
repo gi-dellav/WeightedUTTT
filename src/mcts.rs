@@ -30,6 +30,7 @@ impl Clone for Node {
             score: AtomicU32::new(self.score.load(Ordering::Relaxed)),
             children: std::sync::Mutex::new(self.children.lock().unwrap().clone()),
             parent: self.parent.clone(),
+            last_move: self.last_move,
         }
     }
 }
@@ -134,6 +135,7 @@ impl Player for MCTSPlayer {
             score: AtomicU32::new(0.0f32.to_bits()),
             children: std::sync::Mutex::new(Vec::new()),
             parent: None,
+            last_move: None, 
         });
 
         (0..self.simulation_steps).into_par_iter().for_each(|_| {

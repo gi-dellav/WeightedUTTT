@@ -237,7 +237,7 @@ pub fn play_match<A: Player + Copy, B: Player + Copy>(a: A, b: B) -> MatchStats 
     }
 
     return MatchStats {
-        winner: _last_player,
+        winner,
         number_turns,
         final_grid: grid,
     };
