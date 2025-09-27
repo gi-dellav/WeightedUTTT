@@ -156,10 +156,10 @@ impl Player for MCTSPlayer {
             
             // Expansion
             if node.visits.load(Ordering::Relaxed) > 0 {
-                let legal_moves = self.get_legal_moves(&node.state);
+                let legal_moves = node.state.get_legal_moves(node.last_move);
                 legal_moves.par_iter().for_each(|m| {
                     let mut new_state = node.state;
-                    new_state.set(*m, Cell::Cross);
+                    new_state.set(*m, self.symbol);
                     new_state.update_grid();
                     node.children.lock().unwrap().push(Arc::new(Node {
                         state: new_state,
