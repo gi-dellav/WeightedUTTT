@@ -3,8 +3,8 @@ use crossterm::{
     execute,
     terminal::{Clear, ClearType},
 };
-use std::io::{self, Write, stdout};
-use std::fmt::Write;  // Necessario per write! su String
+use std::io::{self, Write as IoWrite, stdout};
+use std::fmt::Write as FmtWrite;  // Necessario per write! su String
 
 pub fn clear_term() {
     execute!(stdout(), Clear(ClearType::All)).unwrap();
@@ -30,12 +30,12 @@ pub fn print_grid(g: &Grid) {
                     let cell_idx = (local_y * 3 + local_x) as usize;
                     let ch = cell_char(mg.matrix[cell_idx]);
                     // space before each cell for readability
-                    write!(out, " {}", ch).unwrap();
+                    FmtWrite::write!(out, " {}", ch).unwrap();
                 }
 
                 // vertical separator between minigrids (but not after last)
                 if meta_x < 2 {
-                    write!(out, " |").unwrap();
+                    FmtWrite::write!(out, " |").unwrap();
                 }
             }
             out.push('\n');
@@ -52,7 +52,7 @@ pub fn print_grid(g: &Grid) {
         for meta_x in 0..3 {
             let idx = (meta_y * 3 + meta_x) as usize;
             let ch = cell_char(g.completed_minigrid[idx]);
-            write!(out, " {}", ch).unwrap();
+            FmtWrite::write!(out, " {}", ch).unwrap();
         }
         out.push('\n');
     }
@@ -80,7 +80,7 @@ impl Player for HumanPlayer {
         // Empty function, no reset logic needed
     }
 
-    fn select_move(self, grid: Grid, last_move: Option<Coord>) -> Coord {
+    fn select_move(self, grid: Grid, _last_move: Option<Coord>) -> Coord {
         clear_term();
 
         println!("-----------------------------");
