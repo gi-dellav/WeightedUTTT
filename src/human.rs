@@ -82,11 +82,11 @@ impl HumanPlayer {
 }
 
 impl Player for HumanPlayer {
-    fn reset(self) {
+    fn reset(&self) {
         // Empty function, no reset logic needed
     }
 
-    fn select_move(self, grid: Grid, _last_move: Option<Coord>) -> Coord {
+    fn select_move(&self, grid: Grid, _last_move: Option<Coord>) -> Coord {
         // TODO: Implementare la logica per leggere le coordinate dall'utente
         clear_term();
 
