@@ -141,7 +141,7 @@ impl Player for MCTSPlayer {
             state: grid,
             visits: AtomicU32::new(0),
             score: AtomicU32::new(0.0f32.to_bits()),
-            children: Vec::new(),
+            children: std::sync::Mutex::new(Vec::new()),
             parent: None,
         });
 
@@ -149,7 +149,7 @@ impl Player for MCTSPlayer {
             let mut node = root.clone();
             
             // Selection
-            while !node.children.is_empty() {
+            while !node.children.lock().unwrap().is_empty() {
                 node = self.select_best_child(&node);
             }
             
@@ -164,11 +164,11 @@ impl Player for MCTSPlayer {
                         state: new_state,
                         visits: AtomicU32::new(0),
                         score: AtomicU32::new(0.0f32.to_bits()),
-                        children: Vec::new(),
+                        children: std::sync::Mutex::new(Vec::new()),
                         parent: Some(node.clone()),
                     }));
                 });
-                node = node.children[0].clone();
+                node = node.children.lock().unwrap()[0].clone();
             }
             
             // Simulation
@@ -178,7 +178,7 @@ impl Player for MCTSPlayer {
             Self::backpropagate(&node, result);
         });
 
-        root.children.par_iter()
+        root.children.lock().unwrap().par_iter()
             .max_by(|a, b| a.visits.load(Ordering::Relaxed).cmp(&b.visits.load(Ordering::Relaxed)))
             .map(|n| self.get_legal_moves(&root.state)
                 .into_par_iter()
