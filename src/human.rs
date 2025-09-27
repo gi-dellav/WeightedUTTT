@@ -4,7 +4,7 @@ use crossterm::{
     terminal::{Clear, ClearType},
 };
 use std::io::{self, Write as IoWrite, stdout};
-use std::fmt::Write as FmtWrite;  // Necessario per write! su String
+use std::fmt::Write as FmtWrite;
 
 pub fn clear_term() {
     execute!(stdout(), Clear(ClearType::All)).unwrap();
@@ -46,7 +46,7 @@ pub fn print_grid(g: &Grid) {
         }
     }
 
-    out.push_str("\n\n");  // Usa push_str invece di push per stringhe
+    out.push_str("\n\n");
     out.push_str("Completed minigrids (winner per 3x3 block):\n");
     for meta_y in 0..3 {
         for meta_x in 0..3 {
@@ -68,7 +68,7 @@ pub fn input_str() -> String {
         .read_line(&mut input)
         .expect("Failed to read line");
 
-    return input.trim().to_string();  // Converti &str in String
+    return input.trim().to_string();
 }
 
 pub struct HumanPlayer {
@@ -97,12 +97,12 @@ impl Player for HumanPlayer {
         // TODO: Implementare la logica per leggere l'input dell'utente
         // TODO: Validare la mossa rispetto alle regole del gioco
         // TODO: Gestire errori di input
-        
+
         println!("Select grid X: ");
         println!("Select grid Y: ");
         println!("Select minigrid X: ");
         println!("Select minigrid Y: ");
 
-        todo!("Implementare la selezione della mossa per HumanPlayer")
+        todo!("Implement HumanPlayer")
     }
 }

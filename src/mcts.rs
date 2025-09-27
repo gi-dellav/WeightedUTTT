@@ -10,12 +10,9 @@ impl MCTSPlayer {
 }
 
 impl Player for MCTSPlayer {
-    fn reset(&self) {
-        // Reset dello stato MCTS se necessario
-    }
+    fn reset(&self) {}
 
     fn select_move(&self, _grid: Grid, _last_move: Option<Coord>) -> Coord {
-        // TODO: Implementare la logica MCTS
-        todo!("Implementare la selezione della mossa per MCTSPlayer")
+        todo!("Implement MCTS logic");
     }
 }

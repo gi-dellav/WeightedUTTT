@@ -10,6 +10,8 @@ dependencies = [
  "clap",
  "cmaes",
  "crossterm",
+ "rand",
+ "rayon",
 ]
 
 [[package]]
