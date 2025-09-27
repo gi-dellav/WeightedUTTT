@@ -1,7 +1,9 @@
 
-use crate::defs::{Cell, Coord, Grid, Player};
+use crate::defs::{Coord, Grid, Player};
 
-impl Player for super::mcts::MCTSPlayer {
+pub struct MCTSPlayer;
+
+impl Player for MCTSPlayer {
     fn reset(self) {
         // Reset dello stato MCTS se necessario
     }

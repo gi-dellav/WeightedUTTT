@@ -30,12 +30,12 @@ pub fn print_grid(g: &Grid) {
                     let cell_idx = (local_y * 3 + local_x) as usize;
                     let ch = cell_char(mg.matrix[cell_idx]);
                     // space before each cell for readability
-                    FmtWrite::write!(out, " {}", ch).unwrap();
+                    write!(out, " {}", ch).unwrap();
                 }
 
                 // vertical separator between minigrids (but not after last)
                 if meta_x < 2 {
-                    FmtWrite::write!(out, " |").unwrap();
+                    write!(out, " |").unwrap();
                 }
             }
             out.push('\n');
@@ -52,7 +52,7 @@ pub fn print_grid(g: &Grid) {
         for meta_x in 0..3 {
             let idx = (meta_y * 3 + meta_x) as usize;
             let ch = cell_char(g.completed_minigrid[idx]);
-            FmtWrite::write!(out, " {}", ch).unwrap();
+            write!(out, " {}", ch).unwrap();
         }
         out.push('\n');
     }
@@ -82,7 +82,7 @@ impl Player for HumanPlayer {
 
     fn select_move(self, grid: Grid, _last_move: Option<Coord>) -> Coord {
         // TODO: Implementare la logica per leggere le coordinate dall'utente
-        todo!("Implementare la selezione della mossa per HumanPlayer")
+        todo!("Implementare la selezione della mossa per HumanPlayer");
         clear_term();
 
         println!("-----------------------------");
