@@ -81,6 +81,8 @@ impl Player for HumanPlayer {
     }
 
     fn select_move(self, grid: Grid, _last_move: Option<Coord>) -> Coord {
+        // TODO: Implementare la logica per leggere le coordinate dall'utente
+        todo!("Implementare la selezione della mossa per HumanPlayer")
         clear_term();
 
         println!("-----------------------------");
