@@ -192,7 +192,11 @@ impl Player for MCTSPlayer {
                 });
                 
                 // Move to first child node for simulation
-                node = node.children.lock().unwrap()[0].clone();
+                let first_child = {
+                    let children = node.children.lock().unwrap();
+                    children[0].clone()
+                };
+                node = first_child;
             }
 
             // Simulation phase - play out random game from current state
