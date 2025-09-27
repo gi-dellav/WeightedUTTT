@@ -10,9 +10,9 @@ pub struct MCTSPlayer {
     simulation_steps: u32,
 }
 
-#[derive(Clone)]
 use std::sync::atomic::{AtomicU32, Ordering};
 
+#[derive(Clone)]
 struct Node {
     state: Grid,
     visits: AtomicU32,
@@ -39,18 +39,22 @@ impl MCTSPlayer {
         }
     }
 
-    fn get_legal_moves(&self, grid: &Grid) -> Vec<Coord> {
+    fn get_legal_moves(&self, _grid: &Grid) -> Vec<Coord> {
         // TODO: Implementare la logica reale per le mosse legali
         vec![Coord { meta_x: 0, meta_y: 0, x: 0, y: 0 }]
     }
 
     fn ucb(&self, node: &Node) -> f32 {
-        if node.visits == 0 {
+        let visits = node.visits.load(Ordering::Relaxed);
+        if visits == 0 {
             return f32::INFINITY;
         }
-        node.score / node.visits as f32 + 
+        let score = f32::from_bits(node.score.load(Ordering::Relaxed));
+        let parent_visits = node.parent.as_ref().unwrap().visits.load(Ordering::Relaxed) as f32;
+        
+        score / visits as f32 + 
             self.exploration_weight * 
-            (node.parent.as_ref().unwrap().visits as f32).ln().sqrt() / node.visits as f32
+            (parent_visits.ln().sqrt()) / visits as f32
     }
 
     fn select_best_child(&self, node: &Node) -> Arc<Node> {
@@ -99,8 +103,8 @@ impl MCTSPlayer {
     fn backpropagate(node: &Arc<Node>, result: f32) {
         let mut current = node.clone();
         while let Some(parent) = &current.parent {
-            parent.visits += 1;
-            parent.score += result;
+            parent.visits.fetch_add(1, Ordering::Relaxed);
+            parent.score.fetch_add(result.to_bits(), Ordering::Relaxed);
             current = parent.clone();
         }
     }
@@ -112,8 +116,8 @@ impl Player for MCTSPlayer {
     fn select_move(&self, grid: Grid, _last_move: Option<Coord>) -> Coord {
         let root = Arc::new(Node {
             state: grid,
-            visits: 0,
-            score: 0.0,
+            visits: AtomicU32::new(0),
+            score: AtomicU32::new(0.0f32.to_bits()),
             children: Vec::new(),
             parent: None,
         });
@@ -135,8 +139,8 @@ impl Player for MCTSPlayer {
                     new_state.update_grid();
                     node.children.push(Arc::new(Node {
                         state: new_state,
-                        visits: 0,
-                        score: 0.0,
+                        visits: AtomicU32::new(0),
+                        score: AtomicU32::new(0.0f32.to_bits()),
                         children: Vec::new(),
                         parent: Some(node.clone()),
                     }));
@@ -152,7 +156,7 @@ impl Player for MCTSPlayer {
         });
 
         root.children.par_iter()
-            .max_by_key(|n| n.visits)
+            .max_by(|a, b| a.visits.load(Ordering::Relaxed).cmp(&b.visits.load(Ordering::Relaxed)))
             .map(|n| self.get_legal_moves(&root.state)
                 .into_par_iter()
                 .find_first(|m| {
