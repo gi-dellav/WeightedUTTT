@@ -131,6 +131,67 @@ impl Grid {
         }
         return None;
     }
+
+    /// Get all valid legal moves based on game state and last move
+    pub fn get_legal_moves(&self, last_move: Option<Coord>) -> Vec<Coord> {
+        let mut moves = Vec::new();
+        
+        // Determine which meta grids are playable
+        let allowed_meta = match last_move {
+            Some(Coord { x, y, .. }) => {
+                let target_meta_idx = (x + y * 3) as usize;
+                if self.completed_minigrid[target_meta_idx] == Cell::Empty {
+                    vec![(x, y)]
+                } else {
+                    // If target meta grid is completed, player can choose any available
+                    self.completed_minigrid.iter()
+                        .enumerate()
+                        .filter_map(|(i, &cell)| {
+                            if cell == Cell::Empty {
+                                Some((i as u8 % 3, i as u8 / 3))
+                            } else {
+                                None
+                            }
+                        })
+                        .collect()
+                }
+            }
+            None => {
+                // First move can be anywhere
+                self.completed_minigrid.iter()
+                    .enumerate()
+                    .filter_map(|(i, &cell)| {
+                        if cell == Cell::Empty {
+                            Some((i as u8 % 3, i as u8 / 3))
+                        } else {
+                            None
+                        }
+                    })
+                    .collect()
+            }
+        };
+
+        // Check each allowed meta grid for available cells
+        for (meta_x, meta_y) in allowed_meta {
+            let minigrid_idx = (meta_x + meta_y * 3) as usize;
+            let minigrid = self.matrix[minigrid_idx];
+            
+            for y in 0..3 {
+                for x in 0..3 {
+                    if minigrid.matrix[(x + y * 3) as usize] == Cell::Empty {
+                        moves.push(Coord {
+                            meta_x,
+                            meta_y,
+                            x,
+                            y,
+                        });
+                    }
+                }
+            }
+        }
+        
+        moves
+    }
 }
 
 pub trait Player: Send + Sync {
