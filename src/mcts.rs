@@ -1,5 +1,5 @@
 
-use crate::defs::{Cell, Coord, Grid, Player, MatchStats, Minigrid};
+use crate::defs::{Cell, Coord, Grid, Player, MatchStats};
 use rand::Rng;
 use rayon::prelude::*;
 use std::sync::Arc;
@@ -12,13 +12,24 @@ pub struct MCTSPlayer {
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
-#[derive(Clone)]
 struct Node {
     state: Grid,
     visits: AtomicU32,
     score: AtomicU32,
     children: Vec<Arc<Node>>,
     parent: Option<Arc<Node>>,
+}
+
+impl Clone for Node {
+    fn clone(&self) -> Self {
+        Node {
+            state: self.state,
+            visits: AtomicU32::new(self.visits.load(Ordering::Relaxed)),
+            score: AtomicU32::new(self.score.load(Ordering::Relaxed)),
+            children: self.children.clone(),
+            parent: self.parent.clone(),
+        }
+    }
 }
 
 impl Node {
@@ -143,7 +154,7 @@ impl Player for MCTSPlayer {
             }
             
             // Expansion
-            if node.visits > 0 {
+            if node.visits.load(Ordering::Relaxed) > 0 {
                 let legal_moves = self.get_legal_moves(&node.state);
                 legal_moves.par_iter().for_each(|m| {
                     let mut new_state = node.state;
