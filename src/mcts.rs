@@ -1,4 +1,3 @@
-
 use crate::defs::{Cell, Coord, Grid, Player, MatchStats};
 use rand::Rng;
 use rayon::prelude::*;
@@ -39,7 +38,7 @@ impl Node {
     fn get_visits(&self) -> u32 {
         self.visits.load(Ordering::Relaxed)
     }
-    
+
     fn get_score(&self) -> f32 {
         f32::from_bits(self.score.load(Ordering::Relaxed))
     }
@@ -62,9 +61,9 @@ impl MCTSPlayer {
         }
         let score = f32::from_bits(node.score.load(Ordering::Relaxed));
         let parent_visits = node.parent.as_ref().unwrap().visits.load(Ordering::Relaxed) as f32;
-        
-        score / visits as f32 + 
-            self.exploration_weight * 
+
+        score / visits as f32 +
+            self.exploration_weight *
             (parent_visits.ln().sqrt()) / visits as f32
     }
 
@@ -92,11 +91,11 @@ impl MCTSPlayer {
                     break;
                 }
                 let random_move = legal_moves[rng.gen_range(0..legal_moves.len())];
-                
+
                 sim_state.set(random_move, current_player);
                 sim_state.update_grid();
                 sim_state.update_grid();
-                
+
                 stats.final_grid = sim_state;
                 stats.winner = sim_state.is_completed().unwrap_or(Cell::Empty);
                 current_player = if current_player == Cell::Cross {
@@ -135,17 +134,17 @@ impl Player for MCTSPlayer {
             score: AtomicU32::new(0.0f32.to_bits()),
             children: std::sync::Mutex::new(Vec::new()),
             parent: None,
-            last_move: None, 
+            last_move: None,
         });
 
         (0..self.simulation_steps).into_par_iter().for_each(|_| {
             let mut node = root.clone();
-            
+
             // Selection
             while !node.children.lock().unwrap().is_empty() {
                 node = self.select_best_child(&node);
             }
-            
+
             // Expansion
             if node.visits.load(Ordering::Relaxed) > 0 {
                 let legal_moves = node.state.get_legal_moves(node.last_move);
@@ -162,16 +161,16 @@ impl Player for MCTSPlayer {
                         last_move: Some(*m),
                     }));
                 });
-                let next_node = { 
+                let next_node = {
                     let children = node.children.lock().unwrap();
                     children[0].clone()
                 };
                 node = next_node;
             }
-            
+
             // Simulation
             let result = self.simulate(&node.state);
-            
+
             // Backpropagation
             Self::backpropagate(&node, result);
         });
