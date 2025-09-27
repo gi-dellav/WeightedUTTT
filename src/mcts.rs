@@ -43,10 +43,11 @@ impl Node {
 }
 
 impl MCTSPlayer {
-    pub fn new(exploration_weight: f32, simulation_steps: u32) -> Self {
+    pub fn new(exploration_weight: f32, simulation_steps: u32, symbol: Cell) -> Self {
         Self {
             exploration_weight,
             simulation_steps,
+            symbol,
         }
     }
 
