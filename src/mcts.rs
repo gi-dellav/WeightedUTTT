@@ -190,7 +190,7 @@ impl Player for MCTSPlayer {
                     g == n.state
                 })
             })
-                .unwrap())
+                .unwrap()
             .unwrap()
     }
 }
