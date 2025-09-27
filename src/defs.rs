@@ -144,11 +144,11 @@ pub fn play_match<A: Player + Copy, B: Player + Copy>(a: A, b: B) -> MatchStats 
     b.reset();
 
     let mut grid: Grid = Default::default();
-    let mut last_move: Option<Coord> = None;
+    let last_move: Option<Coord> = None;
     let mut last_player: Cell = Cell::Empty;
     let mut number_turns: u8 = 0;
 
-    while true {
+    loop {
         let a_coord = a.select_move(grid, last_move);
         grid.set(a_coord, Cell::Cross);
         grid.update_grid();
