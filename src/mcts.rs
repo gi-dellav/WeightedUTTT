@@ -12,17 +12,19 @@ pub struct MCTSPlayer {
 
 use std::sync::atomic::{AtomicU32, Ordering};
 
+/// Represents a node in the Monte Carlo Tree Search
 struct Node {
     state: Grid,
-    visits: AtomicU32,
-    score: AtomicU32,
+    visits: AtomicU32,       // Number of times node was visited
+    score: AtomicU32,        // Accumulated score (stored as f32 bits)
     children: std::sync::Mutex<Vec<Arc<Node>>>,
     parent: Option<Arc<Node>>,
-    last_move: Option<Coord>,
+    last_move: Option<Coord>, // Move that led to this node
 }
 
 impl Clone for Node {
     fn clone(&self) -> Self {
+        // Atomic values are manually cloned since they don't implement Clone
         Node {
             state: self.state,
             visits: AtomicU32::new(self.visits.load(Ordering::Relaxed)),
@@ -45,6 +47,10 @@ impl Node {
 }
 
 impl MCTSPlayer {
+    /// Creates a new MCTS player with specified parameters:
+    /// - `exploration_weight`: Balance between exploration/exploitation (typically 1.0-2.0)
+    /// - `simulation_steps`: Number of MCTS iterations per move
+    /// - `symbol`: Which player symbol (Cross/Circle) this AI represents
     pub fn new(exploration_weight: f32, simulation_steps: u32, symbol: Cell) -> Self {
         Self {
             exploration_weight,
@@ -53,67 +59,83 @@ impl MCTSPlayer {
         }
     }
 
-
+    /// Calculate Upper Confidence Bound (UCB) for node selection
     fn ucb(&self, node: &Node) -> f32 {
         let visits = node.visits.load(Ordering::Relaxed);
         if visits == 0 {
-            return f32::INFINITY;
+            return f32::INFINITY; // Prioritize unvisited nodes
         }
+        
         let score = f32::from_bits(node.score.load(Ordering::Relaxed));
         let parent_visits = node.parent.as_ref().unwrap().visits.load(Ordering::Relaxed) as f32;
-
-        score / visits as f32 +
-            self.exploration_weight *
-            (parent_visits.ln().sqrt()) / visits as f32
+        
+        // UCB formula: exploitation term + exploration term
+        (score / visits as f32) + 
+        self.exploration_weight * (parent_visits.ln() / visits as f32).sqrt()
     }
 
+    /// Select child node with highest UCB score using parallel iteration
     fn select_best_child(&self, node: &Node) -> Arc<Node> {
-        node.children.lock().unwrap().par_iter()
-            .max_by(|a, b| self.ucb(a).partial_cmp(&self.ucb(b)).unwrap())
+        node.children
+            .lock()
             .unwrap()
+            .par_iter()
+            .max_by(|a, b| self.ucb(a)
+                .partial_cmp(&self.ucb(b))
+                .unwrap_or(std::cmp::Ordering::Equal))
+            .expect("Should have children nodes")
             .clone()
     }
 
+    /// Run Monte Carlo simulation from current state to terminal game state
     fn simulate(&self, state: &Grid) -> f32 {
-        (0..self.simulation_steps).into_par_iter().map(|_| {
-            let mut rng = rand::thread_rng();
-            let mut sim_state = *state;
-            let mut current_player = self.symbol;
-            let mut stats = MatchStats {
-                winner: Cell::Empty,
-                number_turns: 0,
-                final_grid: sim_state,
-            };
-
-            while stats.winner == Cell::Empty && stats.number_turns < 9 {
-                let legal_moves = sim_state.get_legal_moves(None); // During simulation we don't track last move
-                if legal_moves.is_empty() {
-                    break;
-                }
-                let random_move = legal_moves[rng.gen_range(0..legal_moves.len())];
-
-                sim_state.set(random_move, current_player);
-                sim_state.update_grid();
-                sim_state.update_grid();
-
-                stats.final_grid = sim_state;
-                stats.winner = sim_state.is_completed().unwrap_or(Cell::Empty);
-                current_player = if current_player == Cell::Cross {
-                    Cell::Circle
-                } else {
-                    Cell::Cross
+        (0..self.simulation_steps)
+            .into_par_iter()
+            .map(|_| {
+                let mut rng = rand::thread_rng();
+                let mut sim_state = *state;
+                let mut current_player = self.symbol;
+                let mut stats = MatchStats {
+                    winner: Cell::Empty,
+                    number_turns: 0,
+                    final_grid: sim_state,
                 };
-                stats.number_turns += 1;
-            }
 
-            match stats.winner {
-                winner if winner == self.symbol => 1.0,
-                winner if winner != Cell::Empty => -1.0,
-                _ => 0.0,
-            }
-        }).sum::<f32>() / 100.0
+                // Play out random moves until game conclusion
+                while stats.winner == Cell::Empty && stats.number_turns < 9 {
+                    let legal_moves = sim_state.get_legal_moves(None);
+                    if legal_moves.is_empty() {
+                        break; // No valid moves remaining
+                    }
+                    
+                    // Select random move from available options
+                    let random_move = legal_moves[rng.gen_range(0..legal_moves.len())];
+                    sim_state.set(random_move, current_player);
+                    sim_state.update_grid();
+                    
+                    // Check for game completion after each move
+                    stats.winner = sim_state.is_completed().unwrap_or(Cell::Empty);
+                    stats.final_grid = sim_state;
+                    stats.number_turns += 1;
+                    
+                    // Switch players for next turn
+                    current_player = match current_player {
+                        Cell::Cross => Cell::Circle,
+                        _ => Cell::Cross,
+                    };
+                }
+
+                // Return simulation result relative to our player
+                match stats.winner {
+                    winner if winner == self.symbol => 1.0,  // Win
+                    winner if winner != Cell::Empty => -1.0, // Loss
+                    _ => 0.0,                               // Draw
+                }
+            })
+            .sum::<f32>() / self.simulation_steps as f32
     }
 
+    /// Backpropagate simulation results through the tree
     fn backpropagate(node: &Arc<Node>, result: f32) {
         let mut current = node.clone();
         while let Some(parent) = &current.parent {
@@ -125,8 +147,11 @@ impl MCTSPlayer {
 }
 
 impl Player for MCTSPlayer {
-    fn reset(&self) {}
+    fn reset(&self) {
+        // No state needs to be reset between matches
+    }
 
+    /// Select best move using MCTS algorithm
     fn select_move(&self, grid: Grid, _last_move: Option<Coord>) -> Coord {
         let root = Arc::new(Node {
             state: grid,
@@ -137,21 +162,25 @@ impl Player for MCTSPlayer {
             last_move: None,
         });
 
+        // Parallel MCTS iterations
         (0..self.simulation_steps).into_par_iter().for_each(|_| {
             let mut node = root.clone();
 
-            // Selection
+            // Selection phase - traverse tree using UCB until leaf node
             while !node.children.lock().unwrap().is_empty() {
                 node = self.select_best_child(&node);
             }
 
-            // Expansion
+            // Expansion phase - create child nodes for legal moves
             if node.visits.load(Ordering::Relaxed) > 0 {
                 let legal_moves = node.state.get_legal_moves(node.last_move);
+                
+                // Parallel node creation for all legal moves
                 legal_moves.par_iter().for_each(|m| {
                     let mut new_state = node.state;
                     new_state.set(*m, self.symbol);
                     new_state.update_grid();
+                    
                     node.children.lock().unwrap().push(Arc::new(Node {
                         state: new_state,
                         visits: AtomicU32::new(0),
@@ -161,17 +190,15 @@ impl Player for MCTSPlayer {
                         last_move: Some(*m),
                     }));
                 });
-                let next_node = {
-                    let children = node.children.lock().unwrap();
-                    children[0].clone()
-                };
-                node = next_node;
+                
+                // Move to first child node for simulation
+                node = node.children.lock().unwrap()[0].clone();
             }
 
-            // Simulation
+            // Simulation phase - play out random game from current state
             let result = self.simulate(&node.state);
-
-            // Backpropagation
+            
+            // Backpropagation phase - update tree statistics
             Self::backpropagate(&node, result);
         });
 
