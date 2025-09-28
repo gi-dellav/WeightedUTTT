@@ -76,15 +76,18 @@ impl MCTSPlayer {
 
     /// Select child node with highest UCB score using parallel iteration
     fn select_best_child(&self, node: &Node) -> Arc<Node> {
-        node.children
-            .lock()
-            .unwrap()
+        let children = node.children.lock().unwrap();
+        if children.is_empty() {
+            return Arc::new(node.clone()); // Return self if no children
+        }
+        
+        children
             .par_iter()
             .max_by(|a, b| self.ucb(a)
                 .partial_cmp(&self.ucb(b))
                 .unwrap_or(std::cmp::Ordering::Equal))
-            .expect("Should have children nodes")
-            .clone()
+            .map(|n| n.clone())
+            .unwrap_or_else(|| Arc::new(node.clone())) // Fallback to current node
     }
 
     /// Run Monte Carlo simulation from current state to terminal game state
@@ -172,7 +175,7 @@ impl Player for MCTSPlayer {
             }
 
             // Expansion phase - create child nodes for legal moves
-            if node.visits.load(Ordering::Relaxed) > 0 {
+            if node.visits.load(Ordering::Relaxed) == 0 {
                 let legal_moves = node.state.get_legal_moves(node.last_move);
                 
                 // Parallel node creation for all legal moves
@@ -191,12 +194,7 @@ impl Player for MCTSPlayer {
                     }));
                 });
                 
-                // Move to first child node for simulation
-                let first_child = {
-                    let children = node.children.lock().unwrap();
-                    children[0].clone()
-                };
-                node = first_child;
+                // After expansion, continue selection from current node
             }
 
             // Simulation phase - play out random game from current state
@@ -207,20 +205,9 @@ impl Player for MCTSPlayer {
         });
 
         let children = root.children.lock().unwrap();
-        let legal_moves = root.state.get_legal_moves(None);
         children.par_iter()
             .max_by(|a, b| a.visits.load(Ordering::Relaxed).cmp(&b.visits.load(Ordering::Relaxed)))
-            .map(|n| {
-                let root_state = root.state.clone();
-                legal_moves.into_par_iter()
-                .find_first(|m| {
-                    let mut g = root_state;
-                    g.set(*m, Cell::Cross);
-                    g.update_grid();
-                    g == n.state
-                })
-            })
-                .unwrap()
-            .unwrap()
+            .and_then(|n| n.last_move)
+            .expect("No valid moves found despite legal moves existing")
     }
 }

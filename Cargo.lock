@@ -3,18 +3,6 @@
 version = 4
 
 [[package]]
-name = "WeightedUTTT"
-version = "0.1.0"
-dependencies = [
- "cached",
- "clap",
- "cmaes",
- "crossterm",
- "rand",
- "rayon",
-]
-
-[[package]]
 name = "ahash"
 version = "0.8.12"
 source = "registry+https://github.com/rust-lang/crates.io-index"
@@ -837,6 +825,18 @@ name = "typenum"
 version = "1.18.0"
 source = "registry+https://github.com/rust-lang/crates.io-index"
 checksum = "1dccffe3ce07af9386bfd29e80c0ab1a8205a2fc34e4bcd40364df902cfa8f3f"
+
+[[package]]
+name = "ultimate-tic-tac-toe"
+version = "0.1.0"
+dependencies = [
+ "cached",
+ "clap",
+ "cmaes",
+ "crossterm",
+ "rand",
+ "rayon",
+]
 
 [[package]]
 name = "unicode-ident"
