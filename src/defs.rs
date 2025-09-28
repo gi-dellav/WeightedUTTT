@@ -61,9 +61,8 @@ impl Minigrid {
 impl Grid {
     pub fn set(&mut self, coord: Coord, symbol: Cell) {
         let minigrid_pos = (coord.meta_x + 3 * coord.meta_y) as usize;
-        let mut minigrid = self.matrix[minigrid_pos];
         let grid_pos = (coord.x + 3 * coord.y) as usize;
-        minigrid.matrix[grid_pos] = symbol;
+        self.matrix[minigrid_pos].matrix[grid_pos] = symbol;
     }
     pub fn update_grid(&mut self) {
         let mut index: usize = 0;
