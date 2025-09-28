@@ -141,6 +141,11 @@ impl Player for HumanPlayer {
                     c.x == coord.x &&
                     c.y == coord.y
                 ) {
+                    clear_term();
+                    println!("Move accepted!");
+                    print_grid(&grid);
+                    println!("Press enter to continue...");
+                    let _ = input_str();
                     return coord;
                 } else {
                     println!("Invalid move: That position is not playable according to game rules");
