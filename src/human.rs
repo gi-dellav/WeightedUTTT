@@ -141,9 +141,13 @@ impl Player for HumanPlayer {
                     c.x == coord.x &&
                     c.y == coord.y
                 ) {
+                    // Create a temporary grid with the move applied
+                    let mut temp_grid = grid;
+                    temp_grid.set(coord, self.symbol);
+                    
                     clear_term();
                     println!("Move accepted!");
-                    print_grid(&grid);
+                    print_grid(&temp_grid);
                     println!("Press enter to continue...");
                     let _ = input_str();
                     return coord;
