@@ -1,4 +1,4 @@
-use crate::defs::{Cell, Coord, Grid, Player, MatchStats};
+use crate::defs::{Cell, Coord, Grid, MatchStats, Player};
 use rand::Rng;
 use rayon::prelude::*;
 use std::sync::Arc;
@@ -15,8 +15,8 @@ use std::sync::atomic::{AtomicU32, Ordering};
 /// Represents a node in the Monte Carlo Tree Search
 struct Node {
     state: Grid,
-    visits: AtomicU32,       // Number of times node was visited
-    score: AtomicU32,        // Accumulated score (stored as f32 bits)
+    visits: AtomicU32, // Number of times node was visited
+    score: AtomicU32,  // Accumulated score (stored as f32 bits)
     children: std::sync::Mutex<Vec<Arc<Node>>>,
     parent: Option<Arc<Node>>,
     last_move: Option<Coord>, // Move that led to this node
@@ -65,13 +65,13 @@ impl MCTSPlayer {
         if visits == 0 {
             return f32::INFINITY; // Prioritize unvisited nodes
         }
-        
+
         let score = f32::from_bits(node.score.load(Ordering::Relaxed));
         let parent_visits = node.parent.as_ref().unwrap().visits.load(Ordering::Relaxed) as f32;
-        
+
         // UCB formula: exploitation term + exploration term
-        (score / visits as f32) + 
-        self.exploration_weight * (parent_visits.ln() / visits as f32).sqrt()
+        (score / visits as f32)
+            + self.exploration_weight * (parent_visits.ln() / visits as f32).sqrt()
     }
 
     /// Select child node with highest UCB score using parallel iteration
@@ -80,12 +80,14 @@ impl MCTSPlayer {
         if children.is_empty() {
             return Arc::new(node.clone()); // Return self if no children
         }
-        
+
         children
             .par_iter()
-            .max_by(|a, b| self.ucb(a)
-                .partial_cmp(&self.ucb(b))
-                .unwrap_or(std::cmp::Ordering::Equal))
+            .max_by(|a, b| {
+                self.ucb(a)
+                    .partial_cmp(&self.ucb(b))
+                    .unwrap_or(std::cmp::Ordering::Equal)
+            })
             .map(|n| n.clone())
             .unwrap_or_else(|| Arc::new(node.clone())) // Fallback to current node
     }
@@ -110,17 +112,17 @@ impl MCTSPlayer {
                     if legal_moves.is_empty() {
                         break; // No valid moves remaining
                     }
-                    
+
                     // Select random move from available options
                     let random_move = legal_moves[rng.gen_range(0..legal_moves.len())];
                     sim_state.set(random_move, current_player);
                     sim_state.update_grid();
-                    
+
                     // Check for game completion after each move
                     stats.winner = sim_state.is_completed().unwrap_or(Cell::Empty);
                     stats.final_grid = sim_state;
                     stats.number_turns += 1;
-                    
+
                     // Switch players for next turn
                     current_player = match current_player {
                         Cell::Cross => Cell::Circle,
@@ -132,10 +134,11 @@ impl MCTSPlayer {
                 match stats.winner {
                     winner if winner == self.symbol => 1.0,  // Win
                     winner if winner != Cell::Empty => -1.0, // Loss
-                    _ => 0.0,                               // Draw
+                    _ => 0.0,                                // Draw
                 }
             })
-            .sum::<f32>() / self.simulation_steps as f32
+            .sum::<f32>()
+            / self.simulation_steps as f32
     }
 
     /// Backpropagate simulation results through the tree
@@ -177,13 +180,13 @@ impl Player for MCTSPlayer {
             // Expansion phase - create child nodes for legal moves
             if node.visits.load(Ordering::Relaxed) == 0 {
                 let legal_moves = node.state.get_legal_moves(node.last_move);
-                
+
                 // Parallel node creation for all legal moves
                 legal_moves.par_iter().for_each(|m| {
                     let mut new_state = node.state;
                     new_state.set(*m, self.symbol);
                     new_state.update_grid();
-                    
+
                     node.children.lock().unwrap().push(Arc::new(Node {
                         state: new_state,
                         visits: AtomicU32::new(0),
@@ -193,13 +196,13 @@ impl Player for MCTSPlayer {
                         last_move: Some(*m),
                     }));
                 });
-                
+
                 // After expansion, continue selection from current node
             }
 
             // Simulation phase - play out random game from current state
             let result = self.simulate(&node.state);
-            
+
             // Backpropagation phase - update tree statistics
             Self::backpropagate(&node, result);
         });
@@ -208,6 +211,6 @@ impl Player for MCTSPlayer {
         children.par_iter()
             .max_by(|a, b| a.visits.load(Ordering::Relaxed).cmp(&b.visits.load(Ordering::Relaxed)))
             .and_then(|n| n.last_move)
-            .expect("No valid moves found despite legal moves existing")
+            .expect("No valid moves found despite legal moves existing - This error should never be reached")
     }
 }

@@ -3,8 +3,8 @@ use crossterm::{
     execute,
     terminal::{Clear, ClearType},
 };
-use std::io::{self, Write as IoWrite, stdout};
 use std::fmt::Write as FmtWrite;
+use std::io::{self, stdout, Write as IoWrite};
 
 pub fn clear_term() {
     execute!(stdout(), Clear(ClearType::All)).unwrap();
@@ -106,20 +106,18 @@ impl Player for HumanPlayer {
 
             // Parse input coordinates
             let coords = match parts.as_slice() {
-                [mx, my, x, y] => {
-                    match (mx.parse(), my.parse(), x.parse(), y.parse()) {
-                        (Ok(mx), Ok(my), Ok(x), Ok(y)) => Some(Coord {
-                            meta_x: mx,
-                            meta_y: my,
-                            x: x,
-                            y: y,
-                        }),
-                        _ => {
-                            println!("Invalid input: Please enter numbers between 0-2");
-                            continue;
-                        }
+                [mx, my, x, y] => match (mx.parse(), my.parse(), x.parse(), y.parse()) {
+                    (Ok(mx), Ok(my), Ok(x), Ok(y)) => Some(Coord {
+                        meta_x: mx,
+                        meta_y: my,
+                        x,
+                        y,
+                    }),
+                    _ => {
+                        println!("Invalid input: Please enter numbers between 0-2");
+                        continue;
                     }
-                }
+                },
                 _ => {
                     println!("Invalid format: Expected 4 numbers separated by spaces");
                     continue;
@@ -129,18 +127,21 @@ impl Player for HumanPlayer {
             // Validate coordinates
             if let Some(coord) = coords {
                 // Check all coordinates are within 0-2 range
-                if [coord.meta_x, coord.meta_y, coord.x, coord.y].iter().any(|&v| v > 2) {
+                if [coord.meta_x, coord.meta_y, coord.x, coord.y]
+                    .iter()
+                    .any(|&v| v > 2)
+                {
                     println!("Coordinates must be between 0-2");
                     continue;
                 }
 
                 // Check if move is legal by comparing all fields
-                if legal_moves.iter().any(|c| 
-                    c.meta_x == coord.meta_x &&
-                    c.meta_y == coord.meta_y &&
-                    c.x == coord.x &&
-                    c.y == coord.y
-                ) {
+                if legal_moves.iter().any(|c| {
+                    c.meta_x == coord.meta_x
+                        && c.meta_y == coord.meta_y
+                        && c.x == coord.x
+                        && c.y == coord.y
+                }) {
                     // Create a temporary grid with the move applied
                     let mut temp_grid = grid;
                     temp_grid.set(coord, self.symbol);
@@ -149,7 +150,10 @@ impl Player for HumanPlayer {
                     println!("Invalid move: That position is not playable according to game rules");
                     println!("Legal moves are:");
                     for m in &legal_moves {
-                        println!("- Meta: ({},{}) Local: ({},{})", m.meta_x, m.meta_y, m.x, m.y);
+                        println!(
+                            "- Meta: ({},{}) Local: ({},{})",
+                            m.meta_x, m.meta_y, m.x, m.y
+                        );
                     }
                 }
             }
