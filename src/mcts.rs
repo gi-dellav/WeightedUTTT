@@ -120,11 +120,11 @@ impl MCTSPlayer {
                     sim_state.set(random_move, current_player);
                     sim_state.update_grid();
 
-                    // Update last move to current move's LOCAL position for next turn constraints
+                    // Update last move to track BOTH meta and local positions
                     last_move = Some(Coord {
-                        meta_x: random_move.x,
-                        meta_y: random_move.y,
-                        x: random_move.x,
+                        meta_x: random_move.meta_x,  // Keep original meta coordinates
+                        meta_y: random_move.meta_y,
+                        x: random_move.x,           // Local position determines next meta grid
                         y: random_move.y,
                     });
 
