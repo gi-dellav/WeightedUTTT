@@ -122,10 +122,10 @@ impl MCTSPlayer {
 
                     // Update last move to current move's LOCAL position for next turn constraints
                     last_move = Some(Coord {
-                        meta_x: random_move.x,
-                        meta_y: random_move.y,
-                        x: 0, // These will be determined by next player's move
-                        y: 0,
+                        meta_x: random_move.meta_x,
+                        meta_y: random_move.meta_y,
+                        x: random_move.x,
+                        y: random_move.y,
                     });
 
                     // Check for game completion after each move
