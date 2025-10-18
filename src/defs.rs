@@ -1,19 +1,19 @@
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Hash, Eq)]
 pub enum Cell {
     Empty,
     Cross,
     Circle,
 }
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Hash, Eq)]
 pub struct Minigrid {
     pub matrix: [Cell; 9],
 }
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Hash, Eq)]
 pub struct Grid {
     pub matrix: [Minigrid; 9],
     pub completed_minigrid: [Cell; 9],
 }
-#[derive(Clone, Copy, Debug, PartialEq)]
+#[derive(Clone, Copy, Debug, PartialEq, Hash, Eq)]
 pub struct Coord {
     pub meta_x: u8,
     pub meta_y: u8,
@@ -134,7 +134,7 @@ impl Grid {
     /// Get all valid legal moves based on game state and last move
     pub fn get_legal_moves(&self, last_move: Option<Coord>) -> Vec<Coord> {
         let mut moves = Vec::new();
-        
+
         // Determine which meta grids are playable
         let allowed_meta = match last_move {
             Some(Coord { x, y, .. }) => {
@@ -143,7 +143,8 @@ impl Grid {
                     vec![(x, y)]
                 } else {
                     // If target meta grid is completed, player can choose any available
-                    self.completed_minigrid.iter()
+                    self.completed_minigrid
+                        .iter()
                         .enumerate()
                         .filter_map(|(i, &cell)| {
                             if cell == Cell::Empty {
@@ -157,7 +158,8 @@ impl Grid {
             }
             None => {
                 // First move can be anywhere
-                self.completed_minigrid.iter()
+                self.completed_minigrid
+                    .iter()
                     .enumerate()
                     .filter_map(|(i, &cell)| {
                         if cell == Cell::Empty {
@@ -174,7 +176,7 @@ impl Grid {
         for (meta_x, meta_y) in allowed_meta {
             let minigrid_idx = (meta_x + meta_y * 3) as usize;
             let minigrid = self.matrix[minigrid_idx];
-            
+
             for y in 0..3 {
                 for x in 0..3 {
                     if minigrid.matrix[(x + y * 3) as usize] == Cell::Empty {
@@ -188,7 +190,7 @@ impl Grid {
                 }
             }
         }
-        
+
         moves
     }
 }
@@ -214,11 +216,11 @@ pub fn play_match<A: Player + Copy, B: Player + Copy>(a: A, b: B) -> MatchStats 
             Cell::Circle => b.select_move(grid, last_move),
             _ => panic!("Invalid player state"),
         };
-        
+
         grid.set(coord, current_player);
         grid.update_grid();
         last_move = Some(coord);
-        
+
         if let Some(winner) = grid.is_completed() {
             return MatchStats {
                 winner: winner,
@@ -226,7 +228,7 @@ pub fn play_match<A: Player + Copy, B: Player + Copy>(a: A, b: B) -> MatchStats 
                 final_grid: grid,
             };
         }
-        
+
         current_player = if current_player == Cell::Cross {
             Cell::Circle
         } else {
