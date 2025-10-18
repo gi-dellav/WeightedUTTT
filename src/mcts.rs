@@ -189,26 +189,30 @@ impl Player for MCTSPlayer {
 
         // Parallel MCTS iterations
         (0..self.simulation_steps).into_par_iter().for_each(|_| {
-            let mut node = root.clone();
+            let mut current_node = root.clone();
 
             // Selection phase - traverse tree using UCB until leaf node
             loop {
-                let children = node.children.lock().unwrap();
-                if children.is_empty() {
+                // Check if node has children by locking and immediately dropping
+                let has_children = {
+                    let children = current_node.children.lock().unwrap();
+                    !children.is_empty()
+                };
+                if !has_children {
                     break;
                 }
-                node = self.select_best_child(&node);
+                current_node = self.select_best_child(&current_node);
             }
 
             // Always use get_legal_moves to ensure we're following game rules
-            let legal_moves = node.state.get_legal_moves(node.last_move);
+            let legal_moves = current_node.state.get_legal_moves(current_node.last_move);
             
             // If there are legal moves and the node hasn't been expanded yet, expand
-            if node.visits.load(Ordering::Relaxed) == 0 && !legal_moves.is_empty() {
+            if current_node.visits.load(Ordering::Relaxed) == 0 && !legal_moves.is_empty() {
                 // Create child nodes for all legal moves
-                let mut children = node.children.lock().unwrap();
+                let mut children = current_node.children.lock().unwrap();
                 for m in &legal_moves {
-                    let mut new_state = node.state;
+                    let mut new_state = current_node.state;
                     new_state.set(*m, self.symbol);
                     new_state.update_grid();
 
@@ -217,7 +221,7 @@ impl Player for MCTSPlayer {
                         visits: AtomicU32::new(0),
                         score: AtomicU32::new(0.0f32.to_bits()),
                         children: std::sync::Mutex::new(Vec::new()),
-                        parent: Some(node.clone()),
+                        parent: Some(current_node.clone()),
                         last_move: Some(*m),
                     });
                     children.push(child_node);
@@ -226,9 +230,9 @@ impl Player for MCTSPlayer {
 
             // Select node to simulate from
             let node_to_simulate = {
-                let children = node.children.lock().unwrap();
+                let children = current_node.children.lock().unwrap();
                 if children.is_empty() {
-                    node.clone()
+                    current_node.clone()
                 } else {
                     // Pick a random child to simulate from
                     let mut rng = rand::thread_rng();
