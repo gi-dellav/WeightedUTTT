@@ -190,9 +190,20 @@ impl Player for MCTSPlayer {
             // Expansion phase - create child nodes for legal moves
             if node.visits.load(Ordering::Relaxed) == 0 {
                 let legal_moves = node.state.get_legal_moves(node.last_move);
+            
+                // Filter and only create nodes for legal moves
+                let valid_moves: Vec<Coord> = legal_moves
+                    .into_iter()
+                    .filter(|m| {
+                        let minigrid_idx = (m.meta_x + m.meta_y * 3) as usize;
+                        let grid_idx = (m.x + m.y * 3) as usize;
+                        node.state.completed_minigrid[minigrid_idx] == Cell::Empty
+                            && node.state.matrix[minigrid_idx].matrix[grid_idx] == Cell::Empty
+                    })
+                    .collect();
 
-                // Parallel node creation for all legal moves
-                legal_moves.par_iter().for_each(|m| {
+                // Parallel node creation for validated legal moves
+                valid_moves.par_iter().for_each(|m| {
                     let mut new_state = node.state;
                     new_state.set(*m, self.symbol);
                     new_state.update_grid();
