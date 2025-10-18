@@ -106,9 +106,11 @@ impl MCTSPlayer {
                     final_grid: sim_state,
                 };
 
+                let mut last_move: Option<Coord> = None;
+            
                 // Play out random moves until game conclusion
                 while stats.winner == Cell::Empty && stats.number_turns < 9 {
-                    let legal_moves = sim_state.get_legal_moves(None);
+                    let legal_moves = sim_state.get_legal_moves(last_move);
                     if legal_moves.is_empty() {
                         break; // No valid moves remaining
                     }
@@ -118,12 +120,20 @@ impl MCTSPlayer {
                     sim_state.set(random_move, current_player);
                     sim_state.update_grid();
 
+                    // Update last move to current move's LOCAL position for next turn constraints
+                    last_move = Some(Coord {
+                        meta_x: random_move.x,
+                        meta_y: random_move.y,
+                        x: 0, // These will be determined by next player's move
+                        y: 0,
+                    });
+
                     // Check for game completion after each move
                     stats.winner = sim_state.is_completed().unwrap_or(Cell::Empty);
                     stats.final_grid = sim_state;
                     stats.number_turns += 1;
 
-                    // Switch players for next turn
+                    // Switch players for next turn (maintain symbol until turn ends)
                     current_player = match current_player {
                         Cell::Cross => Cell::Circle,
                         _ => Cell::Cross,
