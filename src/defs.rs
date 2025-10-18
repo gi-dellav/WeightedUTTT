@@ -137,10 +137,10 @@ impl Grid {
 
         // Determine which meta grids are playable
         let allowed_meta = match last_move {
-            Some(Coord { x, y, .. }) => {
-                let target_meta_idx = (x + y * 3) as usize;
+            Some(Coord { x: local_x, y: local_y, .. }) => {
+                let target_meta_idx = (local_x + local_y * 3) as usize;
                 if self.completed_minigrid[target_meta_idx] == Cell::Empty {
-                    vec![(x, y)]
+                    vec![(local_x, local_y)]
                 } else {
                     // If target meta grid is completed, player can choose any available
                     self.completed_minigrid
