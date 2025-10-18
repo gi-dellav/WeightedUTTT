@@ -30,7 +30,7 @@ pub fn print_grid(g: &Grid) {
                     let cell_idx = (local_y * 3 + local_x) as usize;
                     let ch = cell_char(mg.matrix[cell_idx]);
                     // space before each cell for readability
-                    write!(out, " {}", ch).unwrap();
+                    write!(out, " {ch}").unwrap();
                 }
 
                 // vertical separator between minigrids (but not after last)
@@ -52,12 +52,12 @@ pub fn print_grid(g: &Grid) {
         for meta_x in 0..3 {
             let idx = (meta_y * 3 + meta_x) as usize;
             let ch = cell_char(g.completed_minigrid[idx]);
-            write!(out, " {}", ch).unwrap();
+            write!(out, " {ch}").unwrap();
         }
         out.push('\n');
     }
 
-    print!("{}", out);
+    print!("{out}");
 }
 
 pub fn input_str() -> String {
@@ -68,7 +68,7 @@ pub fn input_str() -> String {
         .read_line(&mut input)
         .expect("Failed to read line");
 
-    return input.trim().to_string();
+    input.trim().to_string()
 }
 
 #[derive(Clone, Copy)]

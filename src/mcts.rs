@@ -41,7 +41,7 @@ impl Node {
     // fn get_visits(&self) -> u32 {
     //     self.visits.load(Ordering::Relaxed)
     // }
-    // 
+    //
     // fn get_score(&self) -> f32 {
     //     f32::from_bits(self.score.load(Ordering::Relaxed))
     // }
@@ -88,8 +88,7 @@ impl MCTSPlayer {
                 self.ucb(a)
                     .partial_cmp(&self.ucb(b))
                     .unwrap_or(std::cmp::Ordering::Equal)
-            })
-            .map(|n| n.clone())
+            }).cloned()
             .unwrap_or_else(|| Arc::new(node.clone())) // Fallback to current node
     }
 
@@ -99,7 +98,7 @@ impl MCTSPlayer {
         let mut sim_state = *state;
         let mut current_player = self.symbol;
         let mut last_move: Option<Coord> = None;
-    
+
         // Play out random moves until game conclusion
         loop {
             // Check if the game is completed
@@ -110,7 +109,7 @@ impl MCTSPlayer {
                     _ => 0.0,
                 };
             }
-            
+
             // Get legal moves
             let legal_moves = sim_state.get_legal_moves(last_move);
             if legal_moves.is_empty() {
@@ -206,7 +205,7 @@ impl Player for MCTSPlayer {
 
             // Always use get_legal_moves to ensure we're following game rules
             let legal_moves = current_node.state.get_legal_moves(current_node.last_move);
-            
+
             // If there are legal moves and the node hasn't been expanded yet, expand
             if current_node.visits.load(Ordering::Relaxed) == 0 && !legal_moves.is_empty() {
                 // Create child nodes for all legal moves
@@ -250,15 +249,16 @@ impl Player for MCTSPlayer {
 
         // Select the move with the highest number of visits from the root's children
         let children = root.children.lock().unwrap();
-        let best_child = children.iter()
+        let best_child = children
+            .iter()
             .max_by_key(|child| child.visits.load(Ordering::Relaxed));
-        
+
         if let Some(child) = best_child {
             if let Some(mv) = child.last_move {
                 return mv;
             }
         }
-        
+
         // Fallback: pick the first legal move if no child found
         *initial_legal_moves.first().unwrap()
     }

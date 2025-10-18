@@ -1,5 +1,7 @@
 #[derive(Clone, Copy, Debug, PartialEq, Hash, Eq)]
+#[derive(Default)]
 pub enum Cell {
+    #[default]
     Empty,
     Cross,
     Circle,
@@ -27,34 +29,28 @@ pub struct MatchStats {
     pub final_grid: Grid,
 }
 
-impl Default for Cell {
-    fn default() -> Cell {
-        Cell::Empty
-    }
-}
 impl Default for Minigrid {
     fn default() -> Minigrid {
-        return Minigrid {
+        Minigrid {
             matrix: [Cell::Empty; 9],
-        };
+        }
     }
 }
 impl Default for Grid {
     fn default() -> Grid {
-        return Grid {
+        Grid {
             matrix: [Default::default(); 9],
             completed_minigrid: [Cell::Empty; 9],
-        };
+        }
     }
 }
 impl Minigrid {
     fn check(self, v1: usize, v2: usize, v3: usize) -> Option<Cell> {
         // All values must be non-empty and equal
-        if self.matrix[v1] != Cell::Empty {
-            if self.matrix[v1] == self.matrix[v2] && self.matrix[v2] == self.matrix[v3] {
+        if self.matrix[v1] != Cell::Empty
+            && self.matrix[v1] == self.matrix[v2] && self.matrix[v2] == self.matrix[v3] {
                 return Some(self.matrix[v1]);
             }
-        }
         None
     }
 }
@@ -95,13 +91,12 @@ impl Grid {
     }
     fn check_completed(self, v1: usize, v2: usize, v3: usize) -> Option<Cell> {
         // All values must be non-empty and equal
-        if self.completed_minigrid[v1] != Cell::Empty {
-            if self.completed_minigrid[v1] == self.completed_minigrid[v2]
+        if self.completed_minigrid[v1] != Cell::Empty
+            && self.completed_minigrid[v1] == self.completed_minigrid[v2]
                 && self.completed_minigrid[v2] == self.completed_minigrid[v3]
             {
                 return Some(self.completed_minigrid[v1]);
             }
-        }
         None
     }
     pub fn is_completed(self) -> Option<Cell> {
@@ -128,7 +123,7 @@ impl Grid {
                 return Some(winner_cell);
             }
         }
-        return None;
+        None
     }
 
     /// Get all valid legal moves based on game state and last move
@@ -137,7 +132,11 @@ impl Grid {
 
         // Determine which meta grids are playable
         let allowed_meta = match last_move {
-            Some(Coord { x: local_x, y: local_y, .. }) => {
+            Some(Coord {
+                x: local_x,
+                y: local_y,
+                ..
+            }) => {
                 let target_meta_idx = (local_x + local_y * 3) as usize;
                 if self.completed_minigrid[target_meta_idx] == Cell::Empty {
                     vec![(local_x, local_y)]
@@ -223,7 +222,7 @@ pub fn play_match<A: Player + Copy, B: Player + Copy>(a: A, b: B) -> MatchStats 
 
         if let Some(winner) = grid.is_completed() {
             return MatchStats {
-                winner: winner,
+                winner,
                 number_turns,
                 final_grid: grid,
             };
