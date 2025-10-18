@@ -41,7 +41,7 @@ impl WeightedPlayer {
 }
 
 #[cached]
-fn eval_board(params: WeightedParameters, grid: Grid) -> f32 {
+fn eval_board(_params: WeightedParameters, _grid: Grid) -> f32 {
     todo!("Implement eval_board");
 }
 
@@ -50,7 +50,7 @@ impl Player for WeightedPlayer {
         // No reset logic needed
     }
 
-    fn select_move(&self, grid: Grid, last_move: Option<Coord>) -> Coord {
+    fn select_move(&self, _grid: Grid, _last_move: Option<Coord>) -> Coord {
         todo!("Implement WeightedPlayer");
     }
 }

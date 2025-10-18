@@ -1,4 +1,4 @@
-use crate::defs::{Cell, Coord, Grid, MatchStats, Player};
+use crate::defs::{Cell, Coord, Grid, Player};
 use rand::Rng;
 use rayon::prelude::*;
 use std::sync::Arc;
@@ -37,13 +37,14 @@ impl Clone for Node {
 }
 
 impl Node {
-    fn get_visits(&self) -> u32 {
-        self.visits.load(Ordering::Relaxed)
-    }
-
-    fn get_score(&self) -> f32 {
-        f32::from_bits(self.score.load(Ordering::Relaxed))
-    }
+    // These methods are not used, but keeping them commented in case they're needed later
+    // fn get_visits(&self) -> u32 {
+    //     self.visits.load(Ordering::Relaxed)
+    // }
+    // 
+    // fn get_score(&self) -> f32 {
+    //     f32::from_bits(self.score.load(Ordering::Relaxed))
+    // }
 }
 
 impl MCTSPlayer {
@@ -166,12 +167,36 @@ impl Player for MCTSPlayer {
             panic!("No legal moves available");
         }
 
+        // Always expand the root node with all legal moves first
+        {
+            let mut root_children = root.children.lock().unwrap();
+            for m in &initial_legal_moves {
+                let mut new_state = grid;
+                new_state.set(*m, self.symbol);
+                new_state.update_grid();
+
+                let child_node = Arc::new(Node {
+                    state: new_state,
+                    visits: AtomicU32::new(0),
+                    score: AtomicU32::new(0.0f32.to_bits()),
+                    children: std::sync::Mutex::new(Vec::new()),
+                    parent: Some(root.clone()),
+                    last_move: Some(*m),
+                });
+                root_children.push(child_node);
+            }
+        }
+
         // Parallel MCTS iterations
         (0..self.simulation_steps).into_par_iter().for_each(|_| {
             let mut node = root.clone();
 
             // Selection phase - traverse tree using UCB until leaf node
-            while !node.children.lock().unwrap().is_empty() {
+            loop {
+                let children = node.children.lock().unwrap();
+                if children.is_empty() {
+                    break;
+                }
                 node = self.select_best_child(&node);
             }
 
@@ -181,6 +206,7 @@ impl Player for MCTSPlayer {
             // If there are legal moves and the node hasn't been expanded yet, expand
             if node.visits.load(Ordering::Relaxed) == 0 && !legal_moves.is_empty() {
                 // Create child nodes for all legal moves
+                let mut children = node.children.lock().unwrap();
                 for m in &legal_moves {
                     let mut new_state = node.state;
                     new_state.set(*m, self.symbol);
@@ -194,18 +220,21 @@ impl Player for MCTSPlayer {
                         parent: Some(node.clone()),
                         last_move: Some(*m),
                     });
-                    
-                    node.children.lock().unwrap().push(child_node);
+                    children.push(child_node);
                 }
             }
 
-            // If we have children after expansion, select one to simulate from
-            // Otherwise, use the current node for simulation
-            let node_to_simulate = if !node.children.lock().unwrap().is_empty() {
-                // Select a child node to simulate from
-                self.select_best_child(&node)
-            } else {
-                node.clone()
+            // Select node to simulate from
+            let node_to_simulate = {
+                let children = node.children.lock().unwrap();
+                if children.is_empty() {
+                    node.clone()
+                } else {
+                    // Pick a random child to simulate from
+                    let mut rng = rand::thread_rng();
+                    let index = rng.gen_range(0..children.len());
+                    children[index].clone()
+                }
             };
 
             // Simulation phase - play out random game from the selected state
@@ -216,21 +245,17 @@ impl Player for MCTSPlayer {
         });
 
         // Select the move with the highest number of visits from the root's children
-        // Ensure the selected move is legal according to the initial state
         let children = root.children.lock().unwrap();
         let best_child = children.iter()
             .max_by_key(|child| child.visits.load(Ordering::Relaxed));
         
         if let Some(child) = best_child {
             if let Some(mv) = child.last_move {
-                // Verify the move is in the initial legal moves
-                if initial_legal_moves.contains(&mv) {
-                    return mv;
-                }
+                return mv;
             }
         }
         
-        // Fallback: pick the first legal move if no child found or best move is invalid
+        // Fallback: pick the first legal move if no child found
         *initial_legal_moves.first().unwrap()
     }
 }
