@@ -94,61 +94,43 @@ impl MCTSPlayer {
 
     /// Run Monte Carlo simulation from current state to terminal game state
     fn simulate(&self, state: &Grid) -> f32 {
-        (0..self.simulation_steps)
-            .into_par_iter()
-            .map(|_| {
-                let mut rng = rand::thread_rng();
-                let mut sim_state = *state;
-                let mut current_player = self.symbol;
-                let mut stats = MatchStats {
-                    winner: Cell::Empty,
-                    number_turns: 0,
-                    final_grid: sim_state,
+        let mut rng = rand::thread_rng();
+        let mut sim_state = *state;
+        let mut current_player = self.symbol;
+        let mut last_move: Option<Coord> = None;
+    
+        // Play out random moves until game conclusion
+        loop {
+            // Check if the game is completed
+            if let Some(winner) = sim_state.is_completed() {
+                return match winner {
+                    w if w == self.symbol => 1.0,
+                    w if w != Cell::Empty => -1.0,
+                    _ => 0.0,
                 };
-
-                let mut last_move: Option<Coord> = None;
+            }
             
-                // Play out random moves until game conclusion
-                while stats.winner == Cell::Empty && stats.number_turns < 9 {
-                    let legal_moves = sim_state.get_legal_moves(last_move);
-                    if legal_moves.is_empty() {
-                        break; // No valid moves remaining
-                    }
+            // Get legal moves
+            let legal_moves = sim_state.get_legal_moves(last_move);
+            if legal_moves.is_empty() {
+                return 0.0; // Draw if no moves available
+            }
 
-                    // Select random move from available options
-                    let random_move = legal_moves[rng.gen_range(0..legal_moves.len())];
-                    sim_state.set(random_move, current_player);
-                    sim_state.update_grid();
+            // Select random move from available options
+            let random_move = legal_moves[rng.gen_range(0..legal_moves.len())];
+            sim_state.set(random_move, current_player);
+            sim_state.update_grid();
 
-                    // Update last move to track BOTH meta and local positions
-                    last_move = Some(Coord {
-                        meta_x: random_move.meta_x,  // Keep original meta coordinates
-                        meta_y: random_move.meta_y,
-                        x: random_move.x,           // Local position determines next meta grid
-                        y: random_move.y,
-                    });
+            // Update last move
+            last_move = Some(random_move);
 
-                    // Check for game completion after each move
-                    stats.winner = sim_state.is_completed().unwrap_or(Cell::Empty);
-                    stats.final_grid = sim_state;
-                    stats.number_turns += 1;
-
-                    // Switch players for next turn (maintain symbol until turn ends)
-                    current_player = match current_player {
-                        Cell::Cross => Cell::Circle,
-                        _ => Cell::Cross,
-                    };
-                }
-
-                // Return simulation result relative to our player
-                match stats.winner {
-                    winner if winner == self.symbol => 1.0,  // Win
-                    winner if winner != Cell::Empty => -1.0, // Loss
-                    _ => 0.0,                                // Draw
-                }
-            })
-            .sum::<f32>()
-            / self.simulation_steps as f32
+            // Switch players for next turn
+            current_player = match current_player {
+                Cell::Cross => Cell::Circle,
+                Cell::Circle => Cell::Cross,
+                _ => panic!("Invalid player"),
+            };
+        }
     }
 
     /// Backpropagate simulation results through the tree
@@ -168,7 +150,7 @@ impl Player for MCTSPlayer {
     }
 
     /// Select best move using MCTS algorithm
-    fn select_move(&self, grid: Grid, _last_move: Option<Coord>) -> Coord {
+    fn select_move(&self, grid: Grid, last_move: Option<Coord>) -> Coord {
         let root = Arc::new(Node {
             state: grid,
             visits: AtomicU32::new(0),
@@ -177,6 +159,12 @@ impl Player for MCTSPlayer {
             parent: None,
             last_move: None,
         });
+
+        // Get initial legal moves to ensure we always have valid moves
+        let initial_legal_moves = grid.get_legal_moves(last_move);
+        if initial_legal_moves.is_empty() {
+            panic!("No legal moves available");
+        }
 
         // Parallel MCTS iterations
         (0..self.simulation_steps).into_par_iter().for_each(|_| {
@@ -187,51 +175,62 @@ impl Player for MCTSPlayer {
                 node = self.select_best_child(&node);
             }
 
-            // Expansion phase - create child nodes for legal moves
-            if node.visits.load(Ordering::Relaxed) == 0 {
-                let legal_moves = node.state.get_legal_moves(node.last_move);
+            // Always use get_legal_moves to ensure we're following game rules
+            let legal_moves = node.state.get_legal_moves(node.last_move);
             
-                // Filter and only create nodes for legal moves
-                let valid_moves: Vec<Coord> = legal_moves
-                    .into_iter()
-                    .filter(|m| {
-                        let minigrid_idx = (m.meta_x + m.meta_y * 3) as usize;
-                        let grid_idx = (m.x + m.y * 3) as usize;
-                        node.state.completed_minigrid[minigrid_idx] == Cell::Empty
-                            && node.state.matrix[minigrid_idx].matrix[grid_idx] == Cell::Empty
-                    })
-                    .collect();
-
-                // Parallel node creation for validated legal moves
-                valid_moves.par_iter().for_each(|m| {
+            // If there are legal moves and the node hasn't been expanded yet, expand
+            if node.visits.load(Ordering::Relaxed) == 0 && !legal_moves.is_empty() {
+                // Create child nodes for all legal moves
+                for m in &legal_moves {
                     let mut new_state = node.state;
                     new_state.set(*m, self.symbol);
                     new_state.update_grid();
 
-                    node.children.lock().unwrap().push(Arc::new(Node {
+                    let child_node = Arc::new(Node {
                         state: new_state,
                         visits: AtomicU32::new(0),
                         score: AtomicU32::new(0.0f32.to_bits()),
                         children: std::sync::Mutex::new(Vec::new()),
                         parent: Some(node.clone()),
                         last_move: Some(*m),
-                    }));
-                });
-
-                // After expansion, continue selection from current node
+                    });
+                    
+                    node.children.lock().unwrap().push(child_node);
+                }
             }
 
-            // Simulation phase - play out random game from current state
-            let result = self.simulate(&node.state);
+            // If we have children after expansion, select one to simulate from
+            // Otherwise, use the current node for simulation
+            let node_to_simulate = if !node.children.lock().unwrap().is_empty() {
+                // Select a child node to simulate from
+                self.select_best_child(&node)
+            } else {
+                node.clone()
+            };
+
+            // Simulation phase - play out random game from the selected state
+            let result = self.simulate(&node_to_simulate.state);
 
             // Backpropagation phase - update tree statistics
-            Self::backpropagate(&node, result);
+            Self::backpropagate(&node_to_simulate, result);
         });
 
+        // Select the move with the highest number of visits from the root's children
+        // Ensure the selected move is legal according to the initial state
         let children = root.children.lock().unwrap();
-        children.par_iter()
-            .max_by(|a, b| a.visits.load(Ordering::Relaxed).cmp(&b.visits.load(Ordering::Relaxed)))
-            .and_then(|n| n.last_move)
-            .expect("No valid moves found despite legal moves existing - This error should never be reached")
+        let best_child = children.iter()
+            .max_by_key(|child| child.visits.load(Ordering::Relaxed));
+        
+        if let Some(child) = best_child {
+            if let Some(mv) = child.last_move {
+                // Verify the move is in the initial legal moves
+                if initial_legal_moves.contains(&mv) {
+                    return mv;
+                }
+            }
+        }
+        
+        // Fallback: pick the first legal move if no child found or best move is invalid
+        *initial_legal_moves.first().unwrap()
     }
 }
