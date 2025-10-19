@@ -1,5 +1,4 @@
-#[derive(Clone, Copy, Debug, PartialEq, Hash, Eq)]
-#[derive(Default)]
+#[derive(Clone, Copy, Debug, PartialEq, Hash, Eq, Default)]
 pub enum Cell {
     #[default]
     Empty,
@@ -48,9 +47,11 @@ impl Minigrid {
     fn check(self, v1: usize, v2: usize, v3: usize) -> Option<Cell> {
         // All values must be non-empty and equal
         if self.matrix[v1] != Cell::Empty
-            && self.matrix[v1] == self.matrix[v2] && self.matrix[v2] == self.matrix[v3] {
-                return Some(self.matrix[v1]);
-            }
+            && self.matrix[v1] == self.matrix[v2]
+            && self.matrix[v2] == self.matrix[v3]
+        {
+            return Some(self.matrix[v1]);
+        }
         None
     }
 }
@@ -93,10 +94,10 @@ impl Grid {
         // All values must be non-empty and equal
         if self.completed_minigrid[v1] != Cell::Empty
             && self.completed_minigrid[v1] == self.completed_minigrid[v2]
-                && self.completed_minigrid[v2] == self.completed_minigrid[v3]
-            {
-                return Some(self.completed_minigrid[v1]);
-            }
+            && self.completed_minigrid[v2] == self.completed_minigrid[v3]
+        {
+            return Some(self.completed_minigrid[v1]);
+        }
         None
     }
     pub fn is_completed(self) -> Option<Cell> {
