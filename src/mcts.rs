@@ -82,13 +82,17 @@ impl MCTSPlayer {
             return Arc::new(node.clone()); // Return self if no children
         }
 
-        children
-            .par_iter()
+        // Collect children to avoid holding the lock during UCB computation
+        let children_vec: Vec<Arc<Node>> = children.iter().cloned().collect();
+        drop(children); // Release the lock early
+        
+        children_vec
+            .into_par_iter()
             .max_by(|a, b| {
                 self.ucb(a)
                     .partial_cmp(&self.ucb(b))
                     .unwrap_or(std::cmp::Ordering::Equal)
-            }).cloned()
+            })
             .unwrap_or_else(|| Arc::new(node.clone())) // Fallback to current node
     }
 
@@ -136,10 +140,17 @@ impl MCTSPlayer {
     /// Backpropagate simulation results through the tree
     fn backpropagate(node: &Arc<Node>, result: f32) {
         let mut current = node.clone();
-        while let Some(parent) = &current.parent {
-            parent.visits.fetch_add(1, Ordering::Relaxed);
-            parent.score.fetch_add(result.to_bits(), Ordering::Relaxed);
-            current = parent.clone();
+        loop {
+            // Update the current node
+            current.visits.fetch_add(1, Ordering::Relaxed);
+            current.score.fetch_add(result.to_bits(), Ordering::Relaxed);
+            
+            // Move to parent
+            if let Some(parent) = &current.parent {
+                current = parent.clone();
+            } else {
+                break;
+            }
         }
     }
 }
@@ -150,7 +161,12 @@ impl Player for MCTSPlayer {
     }
 
     /// Select best move using MCTS algorithm
-    fn select_move(&self, grid: Grid, last_move: Option<Coord>) -> Coord {
+    fn select_move(
+        &self,
+        grid: Grid,
+        initial_legal_moves: Vec<Coord>,
+        last_move: Option<Coord>,
+    ) -> Coord {
         let root = Arc::new(Node {
             state: grid,
             visits: AtomicU32::new(0),
@@ -159,12 +175,6 @@ impl Player for MCTSPlayer {
             parent: None,
             last_move: None,
         });
-
-        // Get initial legal moves to ensure we always have valid moves
-        let initial_legal_moves = grid.get_legal_moves(last_move);
-        if initial_legal_moves.is_empty() {
-            panic!("No legal moves available");
-        }
 
         // Always expand the root node with all legal moves first
         {
@@ -192,15 +202,15 @@ impl Player for MCTSPlayer {
 
             // Selection phase - traverse tree using UCB until leaf node
             loop {
-                // Check if node has children by locking and immediately dropping
-                let has_children = {
-                    let children = current_node.children.lock().unwrap();
-                    !children.is_empty()
-                };
-                if !has_children {
+                // Check if node has children
+                let children_guard = current_node.children.lock().unwrap();
+                if children_guard.is_empty() {
                     break;
                 }
-                current_node = self.select_best_child(&current_node);
+                // Clone the best child before dropping the lock
+                let best_child = self.select_best_child(&current_node);
+                drop(children_guard);
+                current_node = best_child;
             }
 
             // Always use get_legal_moves to ensure we're following game rules
@@ -210,20 +220,23 @@ impl Player for MCTSPlayer {
             if current_node.visits.load(Ordering::Relaxed) == 0 && !legal_moves.is_empty() {
                 // Create child nodes for all legal moves
                 let mut children = current_node.children.lock().unwrap();
-                for m in &legal_moves {
-                    let mut new_state = current_node.state;
-                    new_state.set(*m, self.symbol);
-                    new_state.update_grid();
+                // Check again in case another thread already expanded this node
+                if children.is_empty() {
+                    for m in &legal_moves {
+                        let mut new_state = current_node.state;
+                        new_state.set(*m, self.symbol);
+                        new_state.update_grid();
 
-                    let child_node = Arc::new(Node {
-                        state: new_state,
-                        visits: AtomicU32::new(0),
-                        score: AtomicU32::new(0.0f32.to_bits()),
-                        children: std::sync::Mutex::new(Vec::new()),
-                        parent: Some(current_node.clone()),
-                        last_move: Some(*m),
-                    });
-                    children.push(child_node);
+                        let child_node = Arc::new(Node {
+                            state: new_state,
+                            visits: AtomicU32::new(0),
+                            score: AtomicU32::new(0.0f32.to_bits()),
+                            children: std::sync::Mutex::new(Vec::new()),
+                            parent: Some(current_node.clone()),
+                            last_move: Some(*m),
+                        });
+                        children.push(child_node);
+                    }
                 }
             }
 

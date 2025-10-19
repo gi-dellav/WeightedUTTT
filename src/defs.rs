@@ -1,3 +1,10 @@
+use crossterm::{
+    execute,
+    terminal::{Clear, ClearType},
+};
+use std::fmt::Write as FmtWrite;
+use std::io::{self, stdout, Write as IoWrite};
+
 #[derive(Clone, Copy, Debug, PartialEq, Hash, Eq, Default)]
 pub enum Cell {
     #[default]
@@ -23,7 +30,7 @@ pub struct Coord {
 }
 #[derive(Clone, Copy, Debug)]
 pub struct MatchStats {
-    pub winner: Cell,
+    pub winner: Option<Cell>,
     pub number_turns: u8,
     pub final_grid: Grid,
 }
@@ -198,7 +205,7 @@ impl Grid {
 pub trait Player: Send + Sync {
     /// Run before playing a match
     fn reset(&self);
-    fn select_move(&self, grid: Grid, last_move: Option<Coord>) -> Coord;
+    fn select_move(&self, grid: Grid, legal_moves: Vec<Coord>, last_move: Option<Coord>) -> Coord;
 }
 
 pub fn play_match<A: Player + Copy, B: Player + Copy>(a: A, b: B) -> MatchStats {
@@ -211,19 +218,29 @@ pub fn play_match<A: Player + Copy, B: Player + Copy>(a: A, b: B) -> MatchStats 
     let mut number_turns: u8 = 0;
 
     loop {
+        let legal_moves = grid.get_legal_moves(last_move);
+        if legal_moves.len() == 0 {
+            return MatchStats {
+                winner: None,
+                number_turns,
+                final_grid: grid,
+            };
+        }
+
         let coord = match current_player {
-            Cell::Cross => a.select_move(grid, last_move),
-            Cell::Circle => b.select_move(grid, last_move),
+            Cell::Cross => a.select_move(grid, legal_moves, last_move),
+            Cell::Circle => b.select_move(grid, legal_moves, last_move),
             _ => panic!("Invalid player state"),
         };
 
         grid.set(coord, current_player);
         grid.update_grid();
+        print_grid(&grid);
         last_move = Some(coord);
 
-        if let Some(winner) = grid.is_completed() {
+        if let Some(winner_symbol) = grid.is_completed() {
             return MatchStats {
-                winner,
+                winner: Some(winner_symbol),
                 number_turns,
                 final_grid: grid,
             };
@@ -236,4 +253,57 @@ pub fn play_match<A: Player + Copy, B: Player + Copy>(a: A, b: B) -> MatchStats 
         };
         number_turns += 1;
     }
+}
+
+pub fn clear_term() {
+    execute!(stdout(), Clear(ClearType::All)).unwrap();
+}
+pub fn cell_char(c: Cell) -> char {
+    match c {
+        Cell::Empty => '.',
+        Cell::Cross => 'X',
+        Cell::Circle => 'O',
+    }
+}
+pub fn print_grid(g: &Grid) {
+    let mut out = String::new();
+
+    for meta_y in 0..3 {
+        for local_y in 0..3 {
+            for meta_x in 0..3 {
+                let mg_idx = (meta_y * 3 + meta_x) as usize;
+                let mg = &g.matrix[mg_idx];
+
+                for local_x in 0..3 {
+                    let cell_idx = (local_y * 3 + local_x) as usize;
+                    let ch = cell_char(mg.matrix[cell_idx]);
+                    // space before each cell for readability
+                    write!(out, " {ch}").unwrap();
+                }
+
+                // vertical separator between minigrids (but not after last)
+                if meta_x < 2 {
+                    write!(out, " |").unwrap();
+                }
+            }
+            out.push('\n');
+        }
+
+        if meta_y < 2 {
+            out.push_str("-------+-------+-------\n");
+        }
+    }
+
+    out.push_str("\n\n");
+    out.push_str("Completed minigrids (winner per 3x3 block):\n");
+    for meta_y in 0..3 {
+        for meta_x in 0..3 {
+            let idx = (meta_y * 3 + meta_x) as usize;
+            let ch = cell_char(g.completed_minigrid[idx]);
+            write!(out, " {ch}").unwrap();
+        }
+        out.push('\n');
+    }
+
+    print!("{out}");
 }

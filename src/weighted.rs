@@ -147,7 +147,12 @@ impl Player for WeightedPlayer {
         // No reset logic needed
     }
 
-    fn select_move(&self, _grid: Grid, _last_move: Option<Coord>) -> Coord {
+    fn select_move(
+        &self,
+        _grid: Grid,
+        _legal_moves: Vec<Coord>,
+        _last_move: Option<Coord>,
+    ) -> Coord {
         todo!("Implement WeightedPlayer");
     }
 }
